@@ -9,7 +9,7 @@ ENV GOBIN=$APP_ROOT/bin
 USER root
 
 
-WORKDIR $GOPATH/src//
+WORKDIR $GOPATH/src/
 COPY go.mod go.sum ./
 
 RUN go mod download
