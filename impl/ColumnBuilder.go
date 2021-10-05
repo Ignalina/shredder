@@ -78,6 +78,7 @@ type FixedSizeTable struct {
 	wg               *sync.WaitGroup
 	SchemaFilePath   string
 	Cores            int
+	LinesParsed int
 }
 
 type  ColumnBuilder interface {
@@ -350,17 +351,9 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	fst.wg.Wait()
 
 
-	var LinesParsed int
+// Sum up some statitics
 	for _, tableChunk := range fst.TableChunks {
-		startToKafka:=time.Now()
-
-		c := make(chan kafka.Event)
-
-		LinesParsed+=tableChunk.LinesParsed
-		for _,abv := range tableChunk.avrobinaroValueBytes {
-			tableChunk.Producer.ProduceFast("'string'", abv,c)
-		}
-		tableChunk.durationToKafka=time.Since(startToKafka)
+		fst.LinesParsed += tableChunk.LinesParsed
 	}
 
 	return nil
@@ -393,6 +386,16 @@ func (fstc *FixedSizeTableChunk) process()  {
 	}
 	fstc.durationToAvro=time.Since(startToAvro)
 	fstc.LinesParsed=lineCnt
+// send to kafka
+
+	startToKafka:=time.Now()
+
+	c := make(chan kafka.Event)
+
+	for _,abv := range fstc.avrobinaroValueBytes {
+		fstc.Producer.ProduceFast("string", abv,c)
+	}
+	fstc.durationToKafka=time.Since(startToKafka)
 
 }
 

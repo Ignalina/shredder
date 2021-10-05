@@ -30,7 +30,7 @@ import (
 func main() {
 
 	start := time.Now()
-    if(len(os.Args)!=5) {
+    if(len(os.Args)!=6) {
 		println("Syntax       : shredder.exe <kafka broker> <schemaregistry> <avro schema> <cores> <data file> ")
 		println("example usage: shredder.exe 10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 test.data")
 		os.Exit(1)
