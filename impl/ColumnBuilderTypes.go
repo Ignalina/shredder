@@ -1,0 +1,218 @@
+package impl
+
+import (
+	"reflect"
+	"strconv"
+)
+
+type ColumnBuilderBoolean struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+// make configurable
+func (c *ColumnBuilderBoolean) ParseValue(name string) bool {
+	boolChar:=name[0]
+	var ourBool bool
+
+	switch boolChar {
+	case uint8('J'):
+		ourBool=true
+		break
+
+	case uint8('j'):
+		ourBool=true
+		break
+
+	case uint8('Y'):
+		ourBool=true
+		break
+	case uint8('y'):
+		ourBool=true
+		break
+
+	case uint8('N'):
+		ourBool=false
+		break
+
+	case uint8('n'):
+		ourBool=false
+		break
+	}
+	c.recordStructInstance.Field(c.fieldnr).SetBool(ourBool)
+
+	//	d := v.Addr().Interface()
+
+
+	return true
+}
+func (c *ColumnBuilderBoolean) FinishColumn() bool {
+	return true
+}
+
+type ColumnBuilderBytes struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+func (c ColumnBuilderBytes) ParseValue(name string) bool {
+	c.recordStructInstance.Field(c.fieldnr).SetBytes([]byte(name))
+	return true
+}
+
+func (c ColumnBuilderBytes) FinishColumn() bool {
+	return true
+}
+
+
+type ColumnBuilderDouble struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+func (c ColumnBuilderDouble) ParseValue(name string) bool {
+	floatNum, err := strconv.ParseFloat(name, 64)
+	c.recordStructInstance.Field(c.fieldnr).SetFloat(floatNum)
+	return (nil==err)
+}
+
+func (c ColumnBuilderDouble) FinishColumn() bool {
+	return true
+}
+
+type ColumnBuilderFloat struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+func (c ColumnBuilderFloat) ParseValue(name string) bool {
+	floatNum, err := strconv.ParseFloat(name, 32)
+	c.recordStructInstance.Field(c.fieldnr).SetFloat (floatNum)
+	return (nil==err)
+}
+
+func (c ColumnBuilderFloat) FinishColumn() bool {
+	return true
+}
+
+type ColumnBuilderLong struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+func (c ColumnBuilderLong) ParseValue(name string) bool {
+	longNum, err := strconv.ParseInt(name,10, 64)
+
+	c.recordStructInstance.Field(c.fieldnr).SetInt(longNum)
+	return (nil==err)
+}
+
+func (c ColumnBuilderLong) FinishColumn() bool {
+	return true
+}
+
+type ColumnBuilderInt struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+func (c ColumnBuilderInt) ParseValue(name string) bool {
+	intNum, err := strconv.ParseInt(name,10, 32)
+	c.recordStructInstance.Field(c.fieldnr).SetInt(intNum)
+	return (nil==err)
+}
+
+func (c ColumnBuilderInt) FinishColumn() bool {
+	return true
+}
+
+type ColumnBuilderString struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+func (c ColumnBuilderString) ParseValue(name string) bool {
+	c.recordStructInstance.Field(c.fieldnr).SetString(name)
+	return true
+}
+
+func (c ColumnBuilderString) FinishColumn() bool {
+	return true
+}
+
+
+type ColumnBuilderDate struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+
+func (c ColumnBuilderDate) ParseValue(name string) bool {
+
+	f,err:=DateStringT1ToUnix(name)
+
+	if (err==nil) {
+		return false
+	}
+	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
+	return true
+}
+
+func (c ColumnBuilderDate) FinishColumn() bool {
+	return true
+}
+
+type ColumnBuilderTimestapMillis struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+
+func (c ColumnBuilderTimestapMillis) ParseValue(name string) bool {
+
+	f,err:=DateStringT1ToUnix(name)
+
+	if (err==nil) {
+		return false
+	}
+	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
+	return true
+}
+
+func (c ColumnBuilderTimestapMillis) FinishColumn() bool {
+	return true
+}
+
+type ColumnBuilderTimestapMicros struct {
+	fixedField *FixedField
+	fieldnr int
+	recordStructInstance *reflect.Value
+}
+
+
+func (c ColumnBuilderTimestapMicros) ParseValue(name string) bool {
+
+	f,err:=DateStringT1ToUnix(name)
+
+	if (err!=nil) {
+		return false
+	}
+	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
+	return true
+}
+
+func (c ColumnBuilderTimestapMicros) FinishColumn() bool {
+	return true
+}
+
+
+
