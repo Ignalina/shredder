@@ -22,8 +22,8 @@ RUN go get -d github.com/alvaroloes/enumer && \
  GIT_SHA=$(git rev-parse --short HEAD) && \
  CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a \
  -ldflags "-extldflags '-static' -w -s -X main.appSha=$GIT_SHA" \
- -o /opt/app-root/src/github.com/ignalina/fixedfile2kafka/fixedfile2kafka \
- github.com/ignalina/fixedfile2kafka
+ -o /opt/app-root/src/github.com/ignalina/shredder/shredder \
+ github.com/ignalina/shredder
 
 
 FROM golang:1.17
@@ -35,6 +35,6 @@ RUN mkdir /app \
 
 USER 1001
 WORKDIR /opt/bin
-COPY --from=builder /opt/app-root/src/github.com/ignalina/fixedfile2kafka/fixedfile2kafka /opt/bin/fixedfile2kafka
+COPY --from=builder /opt/app-root/src/github.com/ignalina/shredder/shredder /opt/bin/shredder
 
-CMD /opt/bin/fixedfile2kafka
+CMD /opt/bin/shredder
