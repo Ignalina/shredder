@@ -31,18 +31,18 @@ import (
 func main() {
 
 	start := time.Now()
-    if(len(os.Args)!=6) {
-		println("Syntax       : shredder.exe <kafka broker> <schemaregistry> <avro schema> <cores> <data file> ")
-		println("example usage: shredder.exe 10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 test.data")
+    if(len(os.Args)!=7) {
+		println("Syntax       : shredder.exe <kafka broker> <schemaregistry> <avro schema> <schema id> <cores> <data file> ")
+		println("example usage: shredder.exe 10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 test.data 2")
 		os.Exit(1)
 	}
 
-	cores,_:= strconv.Atoi(os.Args[4])
-	fullPath_data := os.Args[5]  //"test.last10"
+	schemaId,_:=strconv.Atoi(os.Args[4])
+	cores,_:= strconv.Atoi(os.Args[5])
+	fullPath_data := os.Args[6]  //"test.last10"
 
 	var fst = impl.FixedSizeTable{
-		SchemaID:         1,
-		BootstrapServers: os.Args[1],
+		SchemaID:         schemaId,
 		Schemaregistry:   os.Args[2],
 		SchemaFilePath:   os.Args[3],
 		Cores:            cores,

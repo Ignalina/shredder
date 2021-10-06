@@ -295,7 +295,6 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( ) ( error) {
 func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk2(fileName string) (error) {
 
 	fst.schema,_ = CreateSchemaFromFile(fst.SchemaFilePath)
-	fst.SchemaID = 1  // TODO FIX THIS !!!
 	fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
 
 	fst.wg = &sync.WaitGroup {}
@@ -374,7 +373,7 @@ func (fstc *FixedSizeTableChunk) process()  {
 	lineCnt := 0
 	for scanner.Scan() {
 		line := scanner.Text()
-		if(line[:12]=="************") {
+		if(len(line)>12 && line[:12]=="************") {
 			fmt.Println("skipping footer");
 			break
 		}
