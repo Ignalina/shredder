@@ -68,8 +68,8 @@ type FixedSizeTableChunk struct {
 
 type FixedSizeTable struct {
 	// pointer to bytebuffer
-	bytes            []byte
-	TableChunks      []FixedSizeTableChunk
+	Bytes       []byte
+	TableChunks []FixedSizeTableChunk
 	row              *FixedRow
 	schema           *avro.Schema
 	SchemaID         int
@@ -79,6 +79,9 @@ type FixedSizeTable struct {
 	SchemaFilePath   string
 	Cores            int
 	LinesParsed int
+	DurationReadChunk time.Duration
+	DurationToAvro time.Duration
+	DurationToKafka time.Duration
 }
 
 type  ColumnBuilder interface {
@@ -210,7 +213,7 @@ func getGoTypeFromAvroType(columnType string) reflect.Type {
 
 	 mapping := map[string] reflect.Type {
 		"boolean" : reflect.TypeOf(true),
-		"bytes": reflect.TypeOf([]byte("")),
+		"Bytes": reflect.TypeOf([]byte("")),
 		"float": reflect.TypeOf(float32(0)),
 		"double": reflect.TypeOf(float64(0)),
 		"long": reflect.TypeOf(int64(0)),
@@ -309,7 +312,7 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	defer file.Close()
 	fi,_:=file.Stat()
 
-	fst.bytes=make([]byte, fi.Size())
+	fst.Bytes =make([]byte, fi.Size())
 	fst.TableChunks=make([]FixedSizeTableChunk, fst.Cores)
 
 	chunkSize:=fi.Size()/int64(fst.Cores)
@@ -331,17 +334,17 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		i1:=int(chunkSize)*chunkNr
 		i2:=int(chunkSize)*(chunkNr+1)
 		if(chunkNr==(fst.Cores-1)) {
-			i2= len(fst.bytes)
+			i2= len(fst.Bytes)
 		}
-		buf := fst.bytes[i1:i2]
+		buf := fst.Bytes[i1:i2]
 		startReadChunk:=time.Now()
 		nread,_:=io.ReadFull(file,buf)
 		fst.TableChunks[chunkNr].durationReadChunk=time.Since(startReadChunk)
 		buf = buf[:nread]
-		goon = i2<len(fst.bytes)
+		goon = i2<len(fst.Bytes)
 		p2 = i1+findLastNL(buf)
 
-		fst.TableChunks[chunkNr].bytes=fst.bytes[p1:p2]
+		fst.TableChunks[chunkNr].bytes=fst.Bytes[p1:p2]
 		p1=p2
 		fst.wg.Add(1)
 		go fst.TableChunks[chunkNr].process()
@@ -353,6 +356,9 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 
 // Sum up some statitics
 	for _, tableChunk := range fst.TableChunks {
+		fst.DurationToAvro+=tableChunk.durationToAvro
+		fst.DurationReadChunk+=tableChunk.durationReadChunk
+		fst.DurationToKafka+=tableChunk.durationToKafka
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
 
@@ -386,10 +392,10 @@ func (fstc *FixedSizeTableChunk) process()  {
 	}
 	fstc.durationToAvro=time.Since(startToAvro)
 	fstc.LinesParsed=lineCnt
+
 // send to kafka
 
 	startToKafka:=time.Now()
-
 	c := make(chan kafka.Event)
 
 	for _,abv := range fstc.avrobinaroValueBytes {
@@ -464,7 +470,7 @@ func CreateColumBuilder(fieldnr int,fixedField *FixedField ,columnsize int, 	rec
 	switch fixedField.ColumnType {
 	case "boolean":
 		result = &ColumnBuilderBoolean{fixedField: fixedField, fieldnr: fieldnr, recordStructInstance: recordStructInstance}
-	case "bytes":
+	case "Bytes":
 		result = &ColumnBuilderBytes{fixedField: fixedField, fieldnr: fieldnr, recordStructInstance: recordStructInstance}
 	case "float":
 		result = &ColumnBuilderFloat{fixedField: fixedField, fieldnr: fieldnr, recordStructInstance: recordStructInstance}

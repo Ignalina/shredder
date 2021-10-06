@@ -22,6 +22,7 @@ package main
 import (
 	"fmt"
 	"github.com/ignalina/shredder/impl"
+	"github.com/inhies/go-bytesize"
 	"os"
 	"strconv"
 	"time"
@@ -49,12 +50,38 @@ func main() {
 
 	err:= fst.CreateFixedSizeTableFromSlowDisk2(fullPath_data)
 	if( err!=nil) {
-		print("GOOOD")
+		panic("Nooo we have failed")
 	}
 
-	elapsed := time.Since(start)
-	fmt.Println("elapesed total=", elapsed)
+	printPerfomance(time.Since(start),&fst)
+
+
 
 }
 
+func printPerfomance( elapsed  time.Duration,fst *impl.FixedSizeTable) {
+
+	fcores := float64(fst.Cores)
+	var tpb = bytesize.New(float64(len(fst.Bytes)) / float64(elapsed.Seconds()))
+	var tpl = bytesize.New(float64(fst.LinesParsed) / float64(elapsed.Seconds()))
+	tpls := tpl.String()[:len(tpl.String())-1]
+	toAvro:=fst.DurationToAvro.Seconds()/fcores
+	tpal :=bytesize.New(float64(fst.LinesParsed)/ toAvro)
+	tpals :=tpal.String()[:len(tpal.String())-1]
+
+	fmt.Println("Time spend in total     :", elapsed," parsing ",fst.LinesParsed," lines from ", len(fst.Bytes)," bytes")
+
+	fmt.Println("Troughput bytes/s total :", tpb,"/s")
+	fmt.Println("Troughput lines/s total :", tpls," Lines/s")
+	fmt.Println("Troughput lines/s toAvro:", tpals ," Lines/s")
+
+
+
+	fmt.Println("Time spent toReadChunks :",fst.DurationReadChunk.Seconds()/fcores,"s")
+	fmt.Println("Time spent toAvro       :",toAvro,"s")
+	fmt.Println("Time spent toKafka      :",fst.DurationToKafka.Seconds()/fcores,"s")
+
+
+
+}
 

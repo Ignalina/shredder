@@ -11,6 +11,8 @@ github.com/golang/snappy v0.0.4/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEW
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/hamba/avro v1.6.0 h1:a9tNvjpZVfDQQJWSM2g8hUc7gYacKZkHF3OK0w49UXY=
 github.com/hamba/avro v1.6.0/go.mod h1:iKbXifVeT1gOHU+Eqe8wWziE745Z+Aa/6sbJnWeSW5A=
+github.com/inhies/go-bytesize v0.0.0-20210819104631-275770b98743 h1:X3Xxno5Ji8idrNiUoFc7QyXpqhSYlDRYQmc7mlpMBzU=
+github.com/inhies/go-bytesize v0.0.0-20210819104631-275770b98743/go.mod h1:KrtyD5PFj++GKkFS/7/RRrfnRhAMGQwy75GLCHWrCNs=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/landoop/schema-registry v0.0.0-20190327143759-50a5701c1891 h1:FADDInPE0OtV85SKuJAGwcTiXwzyg2ztBqtUWA5EF04=

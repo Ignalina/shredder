@@ -1,7 +1,7 @@
 # shredder
 shredds Fixed column file to avro/kafka .  
 Implementation uses Avro schema and multicore   
-Speed around 220mb/sec per Core. where 4 core  fills 1000meg/s bandwith to Kafka
+Speed around 220mb/sec per Core using 4 core on a 1Gb/s kafka connection
 
 Notes:
 * Currently avro deserializing dislikes the data in kafka :) When this is fixed we have a 1.0 version :)
@@ -18,10 +18,15 @@ Schema = {
 "type": "record",
 "name": "weblog",
 "fields" : [
-...
+... <30 columns removed from readme >
 skipping footer
-elapesed total= 1.658694972s
-
+Time spend in total     : 1.713205915s  parsing  2590562  lines from  1367816800  bytes
+Troughput bytes/s total : 761.41MB /s
+Troughput lines/s total : 1.44M  Lines/s
+Troughput lines/s toAvro: 2.82M  Lines/s
+Time spent toReadChunks : 0.0215806745 s
+Time spent toAvro       : 0.87478208175 s
+Time spent toKafka      : 0.59487903675 s
 ```
 
 # Example schema
