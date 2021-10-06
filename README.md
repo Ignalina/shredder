@@ -9,8 +9,8 @@ Notes:
 * Currently fixed/supported input format is 8859-1 and utf8 output
  
 # Performance example
-Hardware: 6 core (Amd Threadipper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.
-Datafile: 1.3Gb data file , 30 columns, total 528 chars (runes)  row width.
+Hardware: 6 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
+Datafile: 1.3Gb , 30 columns, total 528 chars (runes)  row width.
 
 ```console
 rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 8 test.last111
