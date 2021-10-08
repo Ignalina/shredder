@@ -48,7 +48,7 @@ func main() {
 		Cores:            cores,
 	}
 
-	err:= fst.CreateFixedSizeTableFromSlowDisk2(fullPath_data)
+	err:= fst.CreateFixedSizeTableFromSlowDisk(fullPath_data)
 	if( err!=nil) {
 		panic("Nooo we have failed")
 	}

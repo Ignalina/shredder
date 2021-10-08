@@ -4,7 +4,6 @@ Implementation uses Avro schema and multicore
 Speed around 220mb/sec per Core using 4 core on a 1Gb/s kafka connection
 
 Notes:
-* Currently avro deserializing dislikes the data in kafka :) When this is fixed we have a 1.0 version :)
 * Multicore implementation.
 * Currently fixed/supported input format is 8859-1 and utf8 output
  
@@ -13,7 +12,7 @@ Hardware: 6 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pr
 Datafile: 1.3Gb , 30 columns, total 528 chars (runes)  row width.
 
 ```console
-rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 8 test.last111
+rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 8 test.last111 2
 Schema = {
 "type": "record",
 "name": "weblog",

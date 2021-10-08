@@ -292,7 +292,7 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( ) ( error) {
 }
 
 // Read chunks of file and process them in go route after each chunk read. Slow disk is non non zero disk like sans etc
-func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk2(fileName string) (error) {
+func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string) (error) {
 
 	fst.schema,_ = CreateSchemaFromFile(fst.SchemaFilePath)
 	fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
