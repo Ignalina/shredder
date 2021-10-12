@@ -43,6 +43,7 @@ func main() {
 
 	var fst = impl.FixedSizeTable{
 		SchemaID:         schemaId,
+		BootstrapServers: os.Args[1],
 		Schemaregistry:   os.Args[2],
 		SchemaFilePath:   os.Args[3],
 		Cores:            cores,
