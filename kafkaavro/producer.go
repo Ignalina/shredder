@@ -37,6 +37,7 @@ type Producer struct {
 // NewProducer is a producer that publishes messages to kafka topic using avro serialization format
 func NewProducer(
 	topicName string,
+	partition int,
 	keySchemaJSON, valueSchemaJSON string,
 	opts ...ProducerOption,
 ) (*Producer, error) {
@@ -126,7 +127,8 @@ func NewProducer(
 
 	p.topicPartition = kafka.TopicPartition{
 		Topic:     &topicName,
-		Partition: kafka.PartitionAny,
+//		Partition: kafka.PartitionAny,
+		Partition: int32(partition),
 	}
 
 	return p, nil

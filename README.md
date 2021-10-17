@@ -3,9 +3,10 @@ shredds Fixed column file to avro/kafka .
 Implementation uses Avro schema and multicore   
 Speed around 220mb/sec per Core using 4 core on a 1Gb/s kafka connection
 
-Notes:
+Notes current features/limitations:
 * Multicore implementation.
-* Currently fixed/supported input format is 8859-1 and utf8 output
+* Each go routine sends to corresponding partition. ie. 8 cores -> 8 go routiens -> 8 partitions
+* Fixed/supported input format is 8859-1 and utf8 output
  
 # Performance example
 Hardware: 6 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
@@ -27,6 +28,7 @@ Time spent toReadChunks : 0.0215806745 s
 Time spent toAvro       : 0.87478208175 s
 Time spent toKafka      : 0.59487903675 s
 ```
+NOTE: Time spent ToKafka is the the transfer time from "Shredder" to librd the underlying the kafka client library)
 
 # Example schema
 Note that column name needs a capital first character.
@@ -47,4 +49,10 @@ Note that column name needs a capital first character.
 ```
 
 # Credits
-kafka/avro code origins from https://github.com/mycujoo/go-kafka-avro from mycujoo.tv "Democratizing football broadcasting."
+* Included kafka/avro client code origins from https://github.com/mycujoo/go-kafka-avro from mycujoo.tv "Democratizing football broadcasting."  
+* Imported go module hamba/avro gives excellent speed and their team have been helpful on upcoming optimizations  https://github.com/hamba/avro  
+
+# Future
+* Improve speed by could be from this https://teivah.medium.com/go-and-cpu-caches-af5d32cc5592
+* Further speed improvements possible from a slight correction of Shredders usage of hamba/avro 
+* Once Go "port" of apache arrow / parquet is done (jira ARROW-7905) ,merge in apache arrow based shredder , that adds Parquet as output.

@@ -54,6 +54,7 @@ type FixedRow struct {
 type avroBinaryBytes []byte
 
 type FixedSizeTableChunk struct {
+	chunkr int
 	fixedSizeTable *FixedSizeTable
 	columnBuilders []ColumnBuilder
 	bytes []byte
@@ -68,20 +69,21 @@ type FixedSizeTableChunk struct {
 
 type FixedSizeTable struct {
 	// pointer to bytebuffer
-	Bytes       []byte
-	TableChunks []FixedSizeTableChunk
-	row              *FixedRow
-	schema           *avro.Schema
-	SchemaID         int
-	BootstrapServers string
-	Schemaregistry   string
-	wg               *sync.WaitGroup
-	SchemaFilePath   string
-	Cores            int
-	LinesParsed int
+	Bytes             []byte
+	TableChunks       []FixedSizeTableChunk
+	row               *FixedRow
+	schema            *avro.Schema
+	SchemaID          int
+	BootstrapServers  string
+	Schemaregistry    string
+	wg                *sync.WaitGroup
+	SchemaFilePath    string
+	Cores             int
+	LinesParsed       int
 	DurationReadChunk time.Duration
-	DurationToAvro time.Duration
-	DurationToKafka time.Duration
+	DurationToAvro    time.Duration
+	DurationToKafka   time.Duration
+	binarySchemaId    []byte
 }
 
 type  ColumnBuilder interface {
@@ -208,7 +210,6 @@ func CreateRowFromSchema(schemaFilePath string) *FixedRow {
 }
 
 
-// REMOVE
 func getGoTypeFromAvroType(columnType string) reflect.Type {
 
 	 mapping := map[string] reflect.Type {
@@ -242,8 +243,8 @@ func (fstc *FixedSizeTableChunk) CreateColumBuilders() bool {
 	}
 
 	fstc.Producer, err = kafkaavro.NewProducer(
-
 		"topic",
+		fstc.chunkr ,
 		`"string"`,
 		(*fstc.fixedSizeTable.schema).String(),
 		kafkaavro.WithKafkaConfig(&kafka.ConfigMap{
@@ -266,12 +267,8 @@ func (fstc *FixedSizeTableChunk) CreateColumBuilders() bool {
 }
 func (fstc *FixedSizeTableChunk) appendAvroBinary( ) ( error) {
 
-	binarySchemaId := make([]byte, 4)
-	binary.BigEndian.PutUint32(binarySchemaId, uint32(fstc.fixedSizeTable.SchemaID))
+// TODO: what if we could have the marhsalling done to a specifed array with the first 5 bytes with the header...
 
-//	var value interface{}
-//	value=fstc.recordStructInstance
-	// Convert to binary Avro data
 	binaryValue, err := avro.Marshal(*fstc.fixedSizeTable.schema, fstc.recordStructInstance.Addr().Interface())
 	if err != nil {
 		return err
@@ -281,7 +278,7 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( ) ( error) {
 	// first byte is magic byte, always 0 for now
 	binaryMsg = append(binaryMsg, byte(0))
 	// 4-byte schema ID as returned by the Schema Registry
-	binaryMsg = append(binaryMsg, binarySchemaId...)
+	binaryMsg = append(binaryMsg, fstc.fixedSizeTable.binarySchemaId...)
 	// avro serialized data in Avro’s binary encoding
 	binaryMsg = append(binaryMsg, binaryValue...)
 
@@ -291,11 +288,18 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( ) ( error) {
 	return nil
 }
 
-// Read chunks of file and process them in go route after each chunk read. Slow disk is non non zero disk like sans etc
+// Read chunks of file and process them in go routine after each chunk read. Slow disk is non non zero disk like sans etc
 func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string) (error) {
 
 	fst.schema,_ = CreateSchemaFromFile(fst.SchemaFilePath)
+	fst.binarySchemaId = make([]byte, 4)
+	binary.BigEndian.PutUint32(fst.binarySchemaId, uint32(fst.SchemaID))
+
+
 	fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
+
+
+
 
 	fst.wg = &sync.WaitGroup {}
 	ParalizeChunks(fst ,fileName)
@@ -327,7 +331,7 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	p2:=0
 
 	for goon {
-		fst.TableChunks[chunkNr]=FixedSizeTableChunk {fixedSizeTable: fst}
+		fst.TableChunks[chunkNr]=FixedSizeTableChunk {fixedSizeTable: fst , chunkr: chunkNr}
 		fst.TableChunks[chunkNr].CreateColumBuilders()
 
 		i1:=int(chunkSize)*chunkNr
