@@ -53,6 +53,6 @@ Note that column name needs a capital first character.
 * Imported go module hamba/avro gives excellent speed and their team have been helpful on upcoming optimizations  https://github.com/hamba/avro  
 
 # Future
-* Improve speed by could be from this https://teivah.medium.com/go-and-cpu-caches-af5d32cc5592
+* Improve speed by by taking inspiration from this https://teivah.medium.com/go-and-cpu-caches-af5d32cc5592
 * Further speed improvements possible from a slight correction of Shredders usage of hamba/avro 
 * Once Go "port" of apache arrow / parquet is done (jira ARROW-7905) ,merge in apache arrow based shredder , that adds Parquet as output.
