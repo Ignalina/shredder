@@ -1,4 +1,5 @@
 /*
+/*
  * MIT No Attribution
  *
  * Copyright 2021 Rickard Lundin (rickard@ignalina.dk)
@@ -367,6 +368,8 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 
 	return nil
 }
+
+
 func (fstc *FixedSizeTableChunk) process()  {
 	startToAvro:=time.Now()
 	defer fstc.fixedSizeTable.wg.Done()
@@ -374,6 +377,10 @@ func (fstc *FixedSizeTableChunk) process()  {
 	decodingReader := transform.NewReader(re, charmap.ISO8859_1.NewDecoder())
 
 	scanner := bufio.NewScanner(decodingReader)
+
+//	var substring[] Substring
+	substring:=createSubstring(fstc.fixedSizeTable)
+
 	lineCnt := 0
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -383,12 +390,11 @@ func (fstc *FixedSizeTableChunk) process()  {
 		}
 		lineCnt++
 
+		getSplitBytePositions(line,substring)
+//		var columnPos int
 
-		var columnPos int
-		for ci, cc := range fstc.fixedSizeTable.row.FixedField {
-			columString := line[columnPos : columnPos+cc.Len]
-			fstc.columnBuilders[ci].ParseValue(columString)
-			columnPos += cc.Len
+		for ci, _ := range fstc.fixedSizeTable.row.FixedField {
+			fstc.columnBuilders[ci].ParseValue(substring[ci].sub)
 		}
 		fstc.appendAvroBinary()
 
@@ -407,6 +413,7 @@ func (fstc *FixedSizeTableChunk) process()  {
 	fstc.durationToKafka=time.Since(startToKafka)
 
 }
+
 
 
 var lo = &time.Location{}
