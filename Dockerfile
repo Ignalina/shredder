@@ -13,7 +13,6 @@ WORKDIR $GOPATH/src/
 COPY . .
 
 RUN go mod download
-RUN echo "confluent.x14.se 10.1.1.90" >> /etc/hosts
 
 # Build static image.
 
