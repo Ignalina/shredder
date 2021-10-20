@@ -10,17 +10,16 @@ USER root
 
 
 WORKDIR $GOPATH/src/
-COPY go.mod go.sum ./
+COPY . .
 
 RUN go mod download
-COPY . .
 
 # Build static image.
 
 RUN go get -d github.com/alvaroloes/enumer && \
  go generate ./... && \ 
  GIT_SHA=$(git rev-parse --short HEAD) && \
- CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a \
+ CGO_ENABLED=1 GOARCH=amd64 GOOS=linux go build -a \
  -ldflags "-extldflags '-static' -w -s -X main.appSha=$GIT_SHA" \
  -o /opt/app-root/src/github.com/ignalina/shredder/shredder \
  github.com/ignalina/shredder

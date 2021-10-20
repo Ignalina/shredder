@@ -3,13 +3,12 @@ package kafkaavro
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
-	"net/url"
-
 	"github.com/caarlos0/env/v6"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/hamba/avro"
 	"github.com/pkg/errors"
+	"log"
+	"net/url"
 )
 
 type KafkaConsumer interface {
