@@ -29,8 +29,6 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/hamba/avro"
 	"github.com/ignalina/shredder/kafkaavro"
-	"golang.org/x/text/encoding/charmap"
-	"golang.org/x/text/transform"
 	"io"
 	"log"
 	"net/url"
@@ -373,9 +371,9 @@ func (fstc *FixedSizeTableChunk) process()  {
 	startToAvro:=time.Now()
 	defer fstc.fixedSizeTable.wg.Done()
 	re := bytes.NewReader(fstc.bytes)
-	decodingReader := transform.NewReader(re, charmap.ISO8859_1.NewDecoder())
+//	decodingReader := transform.NewReader(re, charmap.ISO8859_1.NewDecoder())
 
-	scanner := bufio.NewScanner(decodingReader)
+	scanner := bufio.NewScanner(re)
 
 	substring:=createSubstring(fstc.fixedSizeTable)
 
