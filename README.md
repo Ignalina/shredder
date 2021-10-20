@@ -8,7 +8,7 @@ Notes current features/limitations:
 * Each go routine sends to corresponding partition. ie. 8 cores -> 8 go routiens -> 8 partitions
 * Fixed/supported input format is 8859-1 and utf8 output
 
-#
+# syntax
 shredder.exe <kafka broker's> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file>
 
 # Performance example
