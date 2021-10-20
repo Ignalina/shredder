@@ -85,6 +85,7 @@ type FixedSizeTable struct {
 	DurationToAvro    time.Duration
 	DurationToKafka   time.Duration
 	binarySchemaId    []byte
+	Topic             string
 }
 
 type  ColumnBuilder interface {
@@ -101,7 +102,6 @@ func (f FixedRow) CalRowLength() int {
 	return sum+2
 }
 
-//  unsigned char glyph=(unsigned char)195;
 func findLastNL(bytes []byte) int {
 	p2:= len(bytes)
 	if(0==p2) {
@@ -244,7 +244,7 @@ func (fstc *FixedSizeTableChunk) CreateColumBuilders() bool {
 	}
 
 	fstc.Producer, err = kafkaavro.NewProducer(
-		"topic",
+		fstc.fixedSizeTable.Topic,
 		fstc.chunkr ,
 		`"string"`,
 		(*fstc.fixedSizeTable.schema).String(),
@@ -295,7 +295,6 @@ func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string) (er
 	fst.schema,_ = CreateSchemaFromFile(fst.SchemaFilePath)
 	fst.binarySchemaId = make([]byte, 4)
 	binary.BigEndian.PutUint32(fst.binarySchemaId, uint32(fst.SchemaID))
-
 
 	fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
 
@@ -378,7 +377,6 @@ func (fstc *FixedSizeTableChunk) process()  {
 
 	scanner := bufio.NewScanner(decodingReader)
 
-//	var substring[] Substring
 	substring:=createSubstring(fstc.fixedSizeTable)
 
 	lineCnt := 0
@@ -391,7 +389,6 @@ func (fstc *FixedSizeTableChunk) process()  {
 		lineCnt++
 
 		getSplitBytePositions(line,substring)
-//		var columnPos int
 
 		for ci, _ := range fstc.fixedSizeTable.row.FixedField {
 			fstc.columnBuilders[ci].ParseValue(substring[ci].sub)

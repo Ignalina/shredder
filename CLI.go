@@ -20,9 +20,7 @@
 package main
 
 import (
-	"fmt"
 	"github.com/ignalina/shredder/impl"
-	"github.com/inhies/go-bytesize"
 	"os"
 	"strconv"
 	"time"
@@ -31,22 +29,24 @@ import (
 func main() {
 
 	start := time.Now()
-    if(len(os.Args)!=7) {
-		println("Syntax       : shredder.exe <kafka broker> <schemaregistry> <avro schema> <schema id> <cores> <data file> ")
-		println("example usage: shredder.exe 10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 test.data 2")
+    if(len(os.Args)!=8) {
+
+		println("Shredder (Unreleased Betha 2021-10-21)")
+		println("Syntax       : shredder.exe <kafka broker> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file> ")
+		println("example usage: shredder.exe 10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 tableXYZ_q123 1 test.data")
 		os.Exit(1)
 	}
-
 	schemaId,_:=strconv.Atoi(os.Args[4])
-	cores,_:= strconv.Atoi(os.Args[5])
-	fullPath_data := os.Args[6]  //"test.last10"
+	cores,_:= strconv.Atoi(os.Args[6])
+	fullPath_data := os.Args[7]  //"test.last10"
 
 	var fst = impl.FixedSizeTable{
-		SchemaID:         schemaId,
 		BootstrapServers: os.Args[1],
 		Schemaregistry:   os.Args[2],
 		SchemaFilePath:   os.Args[3],
 		Cores:            cores,
+		Topic: os.Args[5],
+		SchemaID:         schemaId,
 	}
 
 	err:= fst.CreateFixedSizeTableFromSlowDisk(fullPath_data)
@@ -54,35 +54,8 @@ func main() {
 		panic("Nooo we have failed")
 	}
 
-	printPerfomance(time.Since(start),&fst)
-
-
+	impl.PrintPerfomance(time.Since(start),&fst)
 
 }
 
-func printPerfomance( elapsed  time.Duration,fst *impl.FixedSizeTable) {
-
-	fcores := float64(fst.Cores)
-	var tpb = bytesize.New(float64(len(fst.Bytes)) / float64(elapsed.Seconds()))
-	var tpl = bytesize.New(float64(fst.LinesParsed) / float64(elapsed.Seconds()))
-	tpls := tpl.String()[:len(tpl.String())-1]
-	toAvro:=fst.DurationToAvro.Seconds()/fcores
-	tpal :=bytesize.New(float64(fst.LinesParsed)/ toAvro)
-	tpals :=tpal.String()[:len(tpal.String())-1]
-
-	fmt.Println("Time spend in total     :", elapsed," parsing ",fst.LinesParsed," lines from ", len(fst.Bytes)," bytes")
-
-	fmt.Println("Troughput bytes/s total :", tpb,"/s")
-	fmt.Println("Troughput lines/s total :", tpls," Lines/s")
-	fmt.Println("Troughput lines/s toAvro:", tpals ," Lines/s")
-
-
-
-	fmt.Println("Time spent toReadChunks :",fst.DurationReadChunk.Seconds()/fcores,"s")
-	fmt.Println("Time spent toAvro       :",toAvro,"s")
-	fmt.Println("Time spent toKafka      :",fst.DurationToKafka.Seconds()/fcores,"s")
-
-
-
-}
 
