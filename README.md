@@ -9,7 +9,9 @@ Notes current features/limitations:
 * Fixed/supported input format is 8859-1 and utf8 output
 
 # syntax
-shredder.exe <kafka broker's> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file>
+```console
+shredder.exe <kafka broker> <chemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file>
+```
 
 # Performance example
 Hardware: 6 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
