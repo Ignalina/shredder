@@ -6,7 +6,7 @@ Speed around 220mb/sec per Core using 4 core on a 1Gb/s kafka connection
 Notes current features/limitations:
 * Multicore implementation.
 * Each go routine sends to corresponding partition. ie. 8 cores -> 8 go routiens -> 8 partitions
-* Fixed/supported input format is 8859-1 and utf8 output
+* Fixed/supported input format is utf8  and utf8 output (iso8859-1 etc will be supported)
 
 # syntax
 ```console
