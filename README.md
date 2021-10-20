@@ -7,13 +7,16 @@ Notes current features/limitations:
 * Multicore implementation.
 * Each go routine sends to corresponding partition. ie. 8 cores -> 8 go routiens -> 8 partitions
 * Fixed/supported input format is 8859-1 and utf8 output
- 
+
+#
+shredder.exe <kafka broker's> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file>
+
 # Performance example
 Hardware: 6 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
 Datafile: 1.3Gb , 30 columns, total 528 chars (runes)  row width.
 
 ```console
-rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 8 test.last111 2
+rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 2 table_x14 8 test.last111
 Schema = {
 "type": "record",
 "name": "weblog",
