@@ -60,6 +60,7 @@ type FixedSizeTableChunk struct {
 	recordStructInstance reflect.Value
 	avrobinaroValueBytes []avroBinaryBytes
 	Producer *kafkaavro.Producer
+	C chan kafka.Event
 	LinesParsed int
 	durationReadChunk time.Duration
 	durationToAvro time.Duration
@@ -82,6 +83,8 @@ type FixedSizeTable struct {
 	DurationReadChunk time.Duration
 	DurationToAvro    time.Duration
 	DurationToKafka   time.Duration
+	DurationDoneKafka   time.Duration
+
 	binarySchemaId    []byte
 	Topic             string
 }
@@ -106,9 +109,9 @@ func findLastNL(bytes []byte) int {
 		return -1
 	}
 
-	for (p2 >0)  {
-		if(bytes[p2-1]==0x0d && bytes[p2]==0x0a) {
-			return p2 + 1
+	for (p2 >2)  {
+		if(bytes[p2-2]==0x0d && bytes[p2-1]==0x0a) {
+			return p2
 		}
 		p2--
 	}
@@ -300,10 +303,9 @@ func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string) (er
 
 
 	fst.wg = &sync.WaitGroup {}
-	ParalizeChunks(fst ,fileName)
+	return ParalizeChunks(fst ,fileName)
 
 
-	return nil
 }
 func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	file, err := os.Open(filename)
@@ -363,11 +365,26 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
 
+	 startWaitKafka:=time.Now()
+
+
+	for _, tableChunk := range fst.TableChunks {
+
+		e := <-tableChunk.C
+		m := e.(*kafka.Message)
+
+		if m.TopicPartition.Error != nil {
+			return m.TopicPartition.Error
+		}
+	}
+	fst.DurationDoneKafka=time.Since(startWaitKafka)
+
+
 	return nil
 }
 
 
-func (fstc *FixedSizeTableChunk) process()  {
+func (fstc *FixedSizeTableChunk) process() {
 	startToAvro:=time.Now()
 	defer fstc.fixedSizeTable.wg.Done()
 	re := bytes.NewReader(fstc.bytes)
@@ -401,11 +418,12 @@ func (fstc *FixedSizeTableChunk) process()  {
 
 	startToKafka:=time.Now()
 	c := make(chan kafka.Event)
-
+	fstc.C=c
 	for _,abv := range fstc.avrobinaroValueBytes {
 		fstc.Producer.ProduceFast("string", abv,c)
 	}
 	fstc.durationToKafka=time.Since(startToKafka)
+
 
 }
 

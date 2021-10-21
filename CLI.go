@@ -51,7 +51,7 @@ func main() {
 
 	err:= fst.CreateFixedSizeTableFromSlowDisk(fullPath_data)
 	if( err!=nil) {
-		panic("Nooo we have failed")
+		panic("Nooo we have failed"+err.Error())
 	}
 
 	impl.PrintPerfomance(time.Since(start),&fst)
