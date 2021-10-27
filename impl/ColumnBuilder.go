@@ -367,8 +367,9 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		fst.DurationToKafka+=tableChunk.durationToKafka
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
-
-	 startWaitKafka:=time.Now()
+        fmt.Println("Done sum up some statitics")
+	
+	startWaitKafka:=time.Now()
 
 
 	for _, tableChunk := range fst.TableChunks {
@@ -382,7 +383,7 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		}
 	}
 	fst.DurationDoneKafka=time.Since(startWaitKafka)
-
+	fmt.Println("done waiting for duration done kafka")
 
 	return nil
 }
