@@ -1,6 +1,6 @@
 /*
 /*
- * MIT No Attribution
+ * MIT No Attribution 
  *
  * Copyright 2021 Rickard Lundin (rickard@ignalina.dk)
  *
@@ -52,8 +52,7 @@ type FixedRow struct {
 
 type avroBinaryBytes []byte
 
-type FixedSize
-Chunk struct {
+type FixedSizeChunk struct {
 	chunkr int
 	fixedSizeTable *FixedSizeTable
 	columnBuilders []ColumnBuilder
@@ -378,6 +377,7 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		if (nil==tableChunk) {
 		fmt.Println("tablechunj sigridso")
 		}
+		
 		e := <-tableChunk.C
 		fmt.Println("got e from tableChunk.C")
 
