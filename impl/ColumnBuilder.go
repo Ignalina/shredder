@@ -351,10 +351,13 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		p1=p2
 		fst.wg.Add(1)
 		go fst.TableChunks[chunkNr].process()
+		fmt.Println("chunk done ",chunkNr)
 
 		chunkNr++
 	}
+	fmt.Println("all done,now wait for go routines")
 	fst.wg.Wait()
+	fmt.Println("done waiting for go routines")
 
 
 // Sum up some statitics
