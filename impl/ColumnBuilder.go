@@ -52,7 +52,7 @@ type FixedRow struct {
 
 type avroBinaryBytes []byte
 
-type FixedSizeChunk struct {
+type FixedSizeTableChunk struct {
 	chunkr int
 	fixedSizeTable *FixedSizeTable
 	columnBuilders []ColumnBuilder
