@@ -380,7 +380,7 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		}
 		
 		m := e.(*kafka.Message)
-
+                fmt.Println("m.TopicPartition=",m.TopicPartition)
 		if m.TopicPartition.Error != nil {
 			fmt.Println("kafka returns error ",m.TopicPartition.Error)
 			return m.TopicPartition.Error
