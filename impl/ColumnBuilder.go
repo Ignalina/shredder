@@ -374,8 +374,8 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	startWaitKafka:=time.Now()
 	for i, tableChunk := range fst.TableChunks {
 		fmt.Println("check chunk nr ",i, " for kafka transfer errors")
-		if (nil==tableChunk) {
-		fmt.Println("tablechunj sigridso")
+		if (nil==tableChunk.C) {
+		   fmt.Println("tableChunk.C nil")
 		}
 		
 		e := <-tableChunk.C
