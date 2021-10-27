@@ -378,8 +378,12 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		if(nil==e) {
 			fmt.Println("check chunk nr ",i, " returned nil in channel ")
 		}
-		
+		 fmt.Println("will exctract kafka.message from e")
 		m := e.(*kafka.Message)
+
+		if (m==nil) {
+         		 fmt.Println("kafka.message=nil")
+		}
                 fmt.Println("m.TopicPartition=",m.TopicPartition)
 		if m.TopicPartition.Error != nil {
 			fmt.Println("kafka returns error ",m.TopicPartition.Error)
