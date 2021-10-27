@@ -52,7 +52,8 @@ type FixedRow struct {
 
 type avroBinaryBytes []byte
 
-type FixedSizeTableChunk struct {
+type FixedSize
+Chunk struct {
 	chunkr int
 	fixedSizeTable *FixedSizeTable
 	columnBuilders []ColumnBuilder
@@ -374,6 +375,9 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	startWaitKafka:=time.Now()
 	for i, tableChunk := range fst.TableChunks {
 		fmt.Println("check chunk nr ",i, " for kafka transfer errors")
+		if (nil==tableChunk) {
+		fmt.Println("tablechunj sigridso")
+		}
 		e := <-tableChunk.C
 		fmt.Println("got e from tableChunk.C")
 
