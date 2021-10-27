@@ -51,6 +51,7 @@ func main() {
 
 	err:= fst.CreateFixedSizeTableFromSlowDisk(fullPath_data)
 	if( err!=nil) {
+		println("Failed in CLI "+err.Error())
 		panic("Nooo we have failed"+err.Error())
 	}
 
