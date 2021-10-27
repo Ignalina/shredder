@@ -415,7 +415,8 @@ func (fstc *FixedSizeTableChunk) process() {
 	fstc.LinesParsed=lineCnt
 
 // send to kafka
-
+	fmt.Println("parse done , start send to kafka");
+	
 	startToKafka:=time.Now()
 	c := make(chan kafka.Event)
 	fstc.C=c
@@ -423,6 +424,7 @@ func (fstc *FixedSizeTableChunk) process() {
 		fstc.Producer.ProduceFast("string", abv,c)
 	}
 	fstc.durationToKafka=time.Since(startToKafka)
+	fmt.Println("send to  kafka done.");
 
 
 }
