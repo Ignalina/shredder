@@ -369,18 +369,24 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	}
         fmt.Println("Done sum up some statitics")
 	
+	
+// Collect error from prev async kafka	transfers.
 	startWaitKafka:=time.Now()
-
-
-	for _, tableChunk := range fst.TableChunks {
-
+	for i, tableChunk := range fst.TableChunks {
+		fmt.Println("check chunk nr ",i, " for kafka transfer errors")
 		e := <-tableChunk.C
+		if(nil==e) {
+			fmt.Println("check chunk nr ",i, " returned nil in channel ")
+		}
+		
 		m := e.(*kafka.Message)
 
 		if m.TopicPartition.Error != nil {
 			fmt.Println("kafka returns error ",m.TopicPartition.Error)
 			return m.TopicPartition.Error
 		}
+	fmt.Println("done checking kafka for transfer error.. ")
+
 	}
 	fst.DurationDoneKafka=time.Since(startWaitKafka)
 	fmt.Println("done waiting for duration done kafka")
