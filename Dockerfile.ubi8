@@ -1,7 +1,9 @@
 ################################################################
 # STEP 1 use a temporary image to build a static monolith binary
 ################################################################
-FROM ubi8/go-toolset:1.15.14-14  AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.15.14-14  AS builder
+
+
 
 # Pull build dependencies
 ENV GOPATH=$APP_ROOT
@@ -25,7 +27,7 @@ RUN go get -d github.com/alvaroloes/enumer && \
  github.com/ignalina/shredder
 
 
-FROM  ubi8/go-toolset:1.15.14-14
+FROM  registry.access.redhat.com/ubi8
 USER root
 
 RUN mkdir /app \
