@@ -366,7 +366,7 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	
 // Collect error from prev async kafka	transfers.
 	startWaitKafka:=time.Now()
-	for i, tableChunk := range fst.TableChunks {
+	for _, tableChunk := range fst.TableChunks {
 		e := <-tableChunk.C
 		m := e.(*kafka.Message)
 
