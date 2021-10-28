@@ -127,7 +127,7 @@ func CreateSchemaFromFile(schemaFilePath string) (*avro.Schema,error) {
 	defer f.Close()
 	bu := new(strings.Builder)
 	io.Copy(bu, f)
-	fmt.Println("Schema =", bu.String())
+	log.Println(bu.String())
 
 	avroSchema, err := avro.Parse(bu.String())
 	if err != nil {
@@ -198,11 +198,10 @@ func CreateRowFromSchema(schemaFilePath string) *FixedRow {
 					Type:      getGoTypeFromAvroType(columnType),
 				}
 
-				fmt.Println(columnName)
 			}
 
 		default:
-			fmt.Println(k, v, "ignored (unknown)")
+			log.Println("ignored (unknown)"+k+ v )
 		}
 	}
 	fixedRow.FixedField=ff
@@ -351,13 +350,9 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		p1=p2
 		fst.wg.Add(1)
 		go fst.TableChunks[chunkNr].process()
-		fmt.Println("chunk done ",chunkNr)
-
 		chunkNr++
 	}
-	fmt.Println("all done,now wait for go routines")
 	fst.wg.Wait()
-	fmt.Println("done waiting for go routines")
 
 
 // Sum up some statitics
@@ -367,44 +362,28 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 		fst.DurationToKafka+=tableChunk.durationToKafka
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
-        fmt.Println("Done sum up some statitics")
 	
 	
 // Collect error from prev async kafka	transfers.
 	startWaitKafka:=time.Now()
 	for i, tableChunk := range fst.TableChunks {
-		fmt.Println("check chunk nr ",i, " for kafka transfer errors")
 		if (nil==tableChunk.C) {
 		   fmt.Println("tableChunk.C nil")			
 		} else {
 		   fmt.Println("tableChunk.C NOT nil")			
 		}
 
-		
-		fmt.Println("about to pluck out e from tablechunk.C")
-
 		e := <-tableChunk.C
-		fmt.Println("got e from tableChunk.C")
 
-		if(nil==e) {
-			fmt.Println("check chunk nr ",i, " returned nil in channel ")
-		}
-		 fmt.Println("will exctract kafka.message from e")
 		m := e.(*kafka.Message)
 
-		if (m==nil) {
-         		 fmt.Println("kafka.message=nil")
-		}
-                fmt.Println("m.TopicPartition=",m.TopicPartition)
 		if m.TopicPartition.Error != nil {
-			fmt.Println("kafka returns error ",m.TopicPartition.Error)
+			log.Println("kafka returns error ",m.TopicPartition.Error)
 			return m.TopicPartition.Error
 		}
-	fmt.Println("done checking kafka for transfer error.. ")
 
 	}
 	fst.DurationDoneKafka=time.Since(startWaitKafka)
-	fmt.Println("done waiting for duration done kafka")
 
 	return nil
 }
