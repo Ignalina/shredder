@@ -201,7 +201,7 @@ func CreateRowFromSchema(schemaFilePath string) *FixedRow {
 			}
 
 		default:
-			log.Println("ignored (unknown)"+k+ v )
+			log.Println("ignored (unknown)",k, v )
 		}
 	}
 	fixedRow.FixedField=ff
@@ -367,14 +367,7 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 // Collect error from prev async kafka	transfers.
 	startWaitKafka:=time.Now()
 	for i, tableChunk := range fst.TableChunks {
-		if (nil==tableChunk.C) {
-		   fmt.Println("tableChunk.C nil")			
-		} else {
-		   fmt.Println("tableChunk.C NOT nil")			
-		}
-
 		e := <-tableChunk.C
-
 		m := e.(*kafka.Message)
 
 		if m.TopicPartition.Error != nil {
@@ -384,7 +377,6 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 
 	}
 	fst.DurationDoneKafka=time.Since(startWaitKafka)
-
 	return nil
 }
 
