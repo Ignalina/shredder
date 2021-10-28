@@ -28,14 +28,14 @@ import (
 
 func main() {
 
-	start := time.Now()
-    if(len(os.Args)!=8) {
-
+	tart := time.Now()
+        if(len(os.Args)!=8) {        
 		println("Shredder (Unreleased Betha 2021-10-21 17:39)")
 		println("Syntax       : shredder.exe <kafka broker> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file> ")
 		println("example usage: shredder.exe 10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 tableXYZ_q123 1 test.data")
 		os.Exit(1)
 	}
+	
 	schemaId,_:=strconv.Atoi(os.Args[4])
 	cores,_:= strconv.Atoi(os.Args[6])
 	fullPath_data := os.Args[7]  //"test.last10"
@@ -51,7 +51,6 @@ func main() {
 
 	err:= fst.CreateFixedSizeTableFromSlowDisk(fullPath_data)
 	if( err!=nil) {
-		println("Failed in CLI "+err.Error())
 		panic("Nooo we have failed"+err.Error())
 	}
 
