@@ -28,7 +28,7 @@ import (
 
 func main() {
 
-	tart := time.Now()
+	start := time.Now()
         if(len(os.Args)!=8) {        
 		println("Shredder (Unreleased Betha 2021-10-21 17:39)")
 		println("Syntax       : shredder.exe <kafka broker> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file> ")
