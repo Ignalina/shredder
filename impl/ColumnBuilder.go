@@ -122,7 +122,7 @@ func CreateSchemaFromFile(schemaFilePath string) (*avro.Schema,error) {
 	defer f.Close()
 	bu := new(strings.Builder)
 	io.Copy(bu, f)
-	fmt.Println("Schema =", bu.String())
+	log.Println(bu.String())
 
 	avroSchema, err := avro.Parse(bu.String())
 	if err != nil {
@@ -193,11 +193,10 @@ func CreateRowFromSchema(schemaFilePath string) *FixedRow {
 					Type:      getGoTypeFromAvroType(columnType),
 				}
 
-				fmt.Println(columnName)
 			}
 
 		default:
-			fmt.Println(k, v, "ignored (unknown)")
+			log.Println("ignored (unknown)",k, v )
 		}
 	}
 	fixedRow.FixedField=ff
@@ -331,7 +330,6 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 		p1=p2
 		fst.wg.Add(1)
 		go fst.TableChunks[chunkNr].process()
-
 		chunkNr++
 	}
 
@@ -345,6 +343,7 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 		fst.DurationToExport +=tableChunk.durationToExport
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
+<<<<<<< HEAD
 
 	startWaitDoneExport:=time.Now()
 
@@ -352,12 +351,30 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 		err:=tableChunk.exporter.Finish()
 		if(nil!=err) {
 			return err
+=======
+	
+	
+// Collect error from prev async kafka	transfers.
+	startWaitKafka:=time.Now()
+	for _, tableChunk := range fst.TableChunks {
+		e := <-tableChunk.C
+		m := e.(*kafka.Message)
+
+		if m.TopicPartition.Error != nil {
+			log.Println("kafka returns error ",m.TopicPartition.Error)
+			return m.TopicPartition.Error
+>>>>>>> 00e6de0593f1c1a80c61384114a089b963b8fdac
 		}
+
 	}
+<<<<<<< HEAD
 
 	fst.DurationDoneExport =time.Since(startWaitDoneExport)
 
 
+=======
+	fst.DurationDoneKafka=time.Since(startWaitKafka)
+>>>>>>> 00e6de0593f1c1a80c61384114a089b963b8fdac
 	return nil
 }
 
@@ -392,11 +409,25 @@ func (fstc *FixedSizeTableChunk) process() {
 	fstc.LinesParsed=lineCnt
 	fstc.durationToAvro=time.Since(startToAvro)
 
+<<<<<<< HEAD
 
 
 	startToExport:=time.Now()
 	fstc.exporter.Export()
 	fstc.durationToExport =time.Since(startToExport)
+=======
+// send to kafka
+	fmt.Println("parse done , start send to kafka")
+	
+	startToKafka:=time.Now()
+	c := make(chan kafka.Event)
+	fstc.C=c
+	for _,abv := range fstc.avrobinaroValueBytes {
+		fstc.Producer.ProduceFast("string", abv,c)
+	}
+	fstc.durationToKafka=time.Since(startToKafka)
+	fmt.Println("send to  kafka done.")
+>>>>>>> 00e6de0593f1c1a80c61384114a089b963b8fdac
 
 
 }
