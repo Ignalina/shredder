@@ -1,5 +1,4 @@
 /*
-/*
  * MIT No Attribution
  *
  * Copyright 2021 Rickard Lundin (rickard@ignalina.dk)
@@ -26,12 +25,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/hamba/avro"
-	"github.com/ignalina/shredder/kafkaavro"
 	"io"
 	"log"
-	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -59,40 +55,39 @@ type FixedSizeTableChunk struct {
 	bytes []byte
 	recordStructInstance reflect.Value
 	avrobinaroValueBytes []avroBinaryBytes
-	Producer *kafkaavro.Producer
-	C chan kafka.Event
+
+    exporter			 ExportProducer
+
 	LinesParsed int
 	durationReadChunk time.Duration
-	durationToAvro time.Duration
-	durationToKafka time.Duration
+	durationToAvro   time.Duration
+	durationToExport time.Duration
 }
 
 type FixedSizeTable struct {
-	// pointer to bytebuffer
-	Bytes             []byte
+	Args  []string
+	Bytes []byte
 	TableChunks       []FixedSizeTableChunk
 	row               *FixedRow
 	schema            *avro.Schema
 	SchemaID          int
-	BootstrapServers  string
 	Schemaregistry    string
 	wg                *sync.WaitGroup
 	SchemaFilePath    string
 	Cores             int
 	LinesParsed       int
 	DurationReadChunk time.Duration
-	DurationToAvro    time.Duration
-	DurationToKafka   time.Duration
-	DurationDoneKafka   time.Duration
-
+	DurationToAvro     time.Duration
+	DurationToExport   time.Duration
+	DurationDoneExport time.Duration
 	binarySchemaId    []byte
-	Topic             string
 }
 
 type  ColumnBuilder interface {
 	ParseValue(name string) bool
 	FinishColumn() bool
 }
+
 
 func (f FixedRow) CalRowLength() int {
 	sum := 0
@@ -236,25 +231,10 @@ func getGoTypeFromAvroType(columnType string) reflect.Type {
 func (fstc *FixedSizeTableChunk) CreateColumBuilders() bool {
 	fstc.columnBuilders=make([]ColumnBuilder, len(fstc.fixedSizeTable.row.FixedField))
 
-	var err error;
+	var err error
 
+	err=fstc.exporter.Setup()
 
-	srUrl :=url.URL{
-		Scheme: "http",
-		Host:   fstc.fixedSizeTable.Schemaregistry,
-	}
-
-	fstc.Producer, err = kafkaavro.NewProducer(
-		fstc.fixedSizeTable.Topic,
-		fstc.chunkr ,
-		`"string"`,
-		(*fstc.fixedSizeTable.schema).String(),
-		kafkaavro.WithKafkaConfig(&kafka.ConfigMap{
-			"bootstrap.servers":        fstc.fixedSizeTable.BootstrapServers,
-			"socket.keepalive.enable":  true,
-		}),
-		kafkaavro.WithSchemaRegistryURL(&srUrl),
-	)
 	if(nil!=err) {
 		return false
 	}
@@ -284,14 +264,13 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( ) ( error) {
 	// avro serialized data in Avro’s binary encoding
 	binaryMsg = append(binaryMsg, binaryValue...)
 
-
 	fstc.avrobinaroValueBytes=append(fstc.avrobinaroValueBytes,binaryMsg)
 
 	return nil
 }
 
 // Read chunks of file and process them in go routine after each chunk read. Slow disk is non non zero disk like sans etc
-func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string) (error) {
+func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string, args []string) error {
 
 	fst.schema,_ = CreateSchemaFromFile(fst.SchemaFilePath)
 	fst.binarySchemaId = make([]byte, 4)
@@ -299,15 +278,12 @@ func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string) (er
 
 	fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
 
-
-
-
 	fst.wg = &sync.WaitGroup {}
-	return ParalizeChunks(fst ,fileName)
+	return ParalizeChunks(fst ,fileName,args)
 
 
 }
-func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
+func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -331,7 +307,11 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 	p2:=0
 
 	for goon {
+
 		fst.TableChunks[chunkNr]=FixedSizeTableChunk {fixedSizeTable: fst , chunkr: chunkNr}
+		// Uggly way to init two way pointer. NOTE: refactor !
+		fst.TableChunks[chunkNr].exporter=*ExportersFactory(os.Args,&fst.TableChunks[chunkNr])
+
 		fst.TableChunks[chunkNr].CreateColumBuilders()
 
 		i1:=int(chunkSize)*chunkNr
@@ -354,30 +334,28 @@ func ParalizeChunks(fst *FixedSizeTable ,filename string)  error {
 
 		chunkNr++
 	}
-	fst.wg.Wait()
+
+	fst.wg.Wait()  // Waiting for ALL pararell routes to finish
 
 
 // Sum up some statitics
 	for _, tableChunk := range fst.TableChunks {
 		fst.DurationToAvro+=tableChunk.durationToAvro
 		fst.DurationReadChunk+=tableChunk.durationReadChunk
-		fst.DurationToKafka+=tableChunk.durationToKafka
+		fst.DurationToExport +=tableChunk.durationToExport
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
 
-	 startWaitKafka:=time.Now()
-
+	startWaitDoneExport:=time.Now()
 
 	for _, tableChunk := range fst.TableChunks {
-
-		e := <-tableChunk.C
-		m := e.(*kafka.Message)
-
-		if m.TopicPartition.Error != nil {
-			return m.TopicPartition.Error
+		err:=tableChunk.exporter.Finish()
+		if(nil!=err) {
+			return err
 		}
 	}
-	fst.DurationDoneKafka=time.Since(startWaitKafka)
+
+	fst.DurationDoneExport =time.Since(startWaitDoneExport)
 
 
 	return nil
@@ -411,18 +389,14 @@ func (fstc *FixedSizeTableChunk) process() {
 		fstc.appendAvroBinary()
 
 	}
-	fstc.durationToAvro=time.Since(startToAvro)
 	fstc.LinesParsed=lineCnt
+	fstc.durationToAvro=time.Since(startToAvro)
 
-// send to kafka
 
-	startToKafka:=time.Now()
-	c := make(chan kafka.Event)
-	fstc.C=c
-	for _,abv := range fstc.avrobinaroValueBytes {
-		fstc.Producer.ProduceFast("string", abv,c)
-	}
-	fstc.durationToKafka=time.Since(startToKafka)
+
+	startToExport:=time.Now()
+	fstc.exporter.Export()
+	fstc.durationToExport =time.Since(startToExport)
 
 
 }
