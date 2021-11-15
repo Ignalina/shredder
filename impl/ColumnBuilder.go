@@ -403,10 +403,11 @@ func (fstc *FixedSizeTableChunk) process() {
 var lo = &time.Location{}
 
 
-// 2020-07-09-09.59.59.99375
-func  DateStringT1ToUnix(dateString string) (int64,error) {
 
-	var year64,month64,day64,hour64,minute64,second64 int64
+// 2020-07-09-09.59.59.99375
+func DateStringT1ToUnix_millisecond(dateString string) (int64,error) {
+
+	var year64,month64,day64,hour64,minute64,second64,nanoSec64 int64
 	var err error
 
 	year64,err = strconv.ParseInt(dateString[:4], 10, 32)
@@ -441,9 +442,121 @@ func  DateStringT1ToUnix(dateString string) (int64,error) {
 		return 0,err
 	}
 
+
+	nanoSec64,err = strconv.ParseInt(dateString[20:23], 10, 8)
+	nanoSec64=nanoSec64*1000000
+	if(nil!=err) {
+		return 0,err
+	}
+
 	var ti time.Time
 
-	ti=time.Date(int(year64), time.Month(month64) , int(day64), int(hour64), int(minute64), int(second64), 0, lo)
+	ti=time.Date(int(year64), time.Month(month64) , int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
+
+	return ti.Unix(),nil
+
+}
+
+// 2020-07-09-09.59.59.99375
+func DateStringT1ToUnix_microsecond(dateString string) (int64,error) {
+
+	var year64,month64,day64,hour64,minute64,second64,nanoSec64 int64
+	var err error
+
+	year64,err = strconv.ParseInt(dateString[:4], 10, 32)
+
+	if(nil!=err) {
+		return 0,err
+	}
+
+	month64,err = strconv.ParseInt(dateString[5:7], 10, 8)
+
+	if(nil!=err) {
+		return 0,err
+	}
+
+	day64,err = strconv.ParseInt(dateString[8:10], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+	hour64,err = strconv.ParseInt(dateString[11:13], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+	minute64,err = strconv.ParseInt(dateString[14:16], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+	second64,err = strconv.ParseInt(dateString[17:19], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+
+	nanoSec64,err = strconv.ParseInt(dateString[20:26], 10, 8)
+	nanoSec64=nanoSec64*1000
+	if(nil!=err) {
+		return 0,err
+	}
+
+	var ti time.Time
+
+	ti=time.Date(int(year64), time.Month(month64) , int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
+
+	return ti.Unix(),nil
+
+}
+
+func DateStringT1ToUnix_nanosecond(dateString string) (int64,error) {
+
+	var year64,month64,day64,hour64,minute64,second64,nanoSec64 int64
+	var err error
+
+	year64,err = strconv.ParseInt(dateString[:4], 10, 32)
+
+	if(nil!=err) {
+		return 0,err
+	}
+
+	month64,err = strconv.ParseInt(dateString[5:7], 10, 8)
+
+	if(nil!=err) {
+		return 0,err
+	}
+
+	day64,err = strconv.ParseInt(dateString[8:10], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+	hour64,err = strconv.ParseInt(dateString[11:13], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+	minute64,err = strconv.ParseInt(dateString[14:16], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+	second64,err = strconv.ParseInt(dateString[17:19], 10, 8)
+	if(nil!=err) {
+		return 0,err
+	}
+
+
+	nanoSec64,err = strconv.ParseInt(dateString[20:29], 10, 8)
+
+	if(nil!=err) {
+		return 0,err
+	}
+
+	var ti time.Time
+
+	ti=time.Date(int(year64), time.Month(month64) , int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
 
 	return ti.Unix(),nil
 

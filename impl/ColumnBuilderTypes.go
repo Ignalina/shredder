@@ -173,7 +173,7 @@ type ColumnBuilderDate struct {
 
 func (c ColumnBuilderDate) ParseValue(name string) bool {
 
-	f,err:=DateStringT1ToUnix(name)
+	f,err:= DateStringT1ToUnix_microsecond(name)
 
 	if (err==nil) {
 		return false
@@ -195,7 +195,7 @@ type ColumnBuilderTimestapMillis struct {
 
 func (c ColumnBuilderTimestapMillis) ParseValue(name string) bool {
 
-	f,err:=DateStringT1ToUnix(name)
+	f,err:= DateStringT1ToUnix_millisecond(name)
 
 	if (err==nil) {
 		return false
@@ -217,7 +217,7 @@ type ColumnBuilderTimestapMicros struct {
 
 func (c ColumnBuilderTimestapMicros) ParseValue(name string) bool {
 
-	f,err:=DateStringT1ToUnix(name)
+	f,err:= DateStringT1ToUnix_microsecond(name)
 
 	if (err!=nil) {
 		return false
