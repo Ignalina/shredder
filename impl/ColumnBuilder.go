@@ -282,8 +282,11 @@ func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string, arg
 
 
 }
+
 func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
+
 	file, err := os.Open(filename)
+
 	if err != nil {
 		return err
 	}
@@ -343,38 +346,17 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 		fst.DurationToExport +=tableChunk.durationToExport
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
-<<<<<<< HEAD
 
 	startWaitDoneExport:=time.Now()
 
 	for _, tableChunk := range fst.TableChunks {
-		err:=tableChunk.exporter.Finish()
-		if(nil!=err) {
+		err := tableChunk.exporter.Finish()
+		if (nil != err) {
 			return err
-=======
-	
-	
-// Collect error from prev async kafka	transfers.
-	startWaitKafka:=time.Now()
-	for _, tableChunk := range fst.TableChunks {
-		e := <-tableChunk.C
-		m := e.(*kafka.Message)
-
-		if m.TopicPartition.Error != nil {
-			log.Println("kafka returns error ",m.TopicPartition.Error)
-			return m.TopicPartition.Error
->>>>>>> 00e6de0593f1c1a80c61384114a089b963b8fdac
 		}
-
 	}
-<<<<<<< HEAD
-
 	fst.DurationDoneExport =time.Since(startWaitDoneExport)
 
-
-=======
-	fst.DurationDoneKafka=time.Since(startWaitKafka)
->>>>>>> 00e6de0593f1c1a80c61384114a089b963b8fdac
 	return nil
 }
 
@@ -409,25 +391,9 @@ func (fstc *FixedSizeTableChunk) process() {
 	fstc.LinesParsed=lineCnt
 	fstc.durationToAvro=time.Since(startToAvro)
 
-<<<<<<< HEAD
-
-
 	startToExport:=time.Now()
 	fstc.exporter.Export()
 	fstc.durationToExport =time.Since(startToExport)
-=======
-// send to kafka
-	fmt.Println("parse done , start send to kafka")
-	
-	startToKafka:=time.Now()
-	c := make(chan kafka.Event)
-	fstc.C=c
-	for _,abv := range fstc.avrobinaroValueBytes {
-		fstc.Producer.ProduceFast("string", abv,c)
-	}
-	fstc.durationToKafka=time.Since(startToKafka)
-	fmt.Println("send to  kafka done.")
->>>>>>> 00e6de0593f1c1a80c61384114a089b963b8fdac
 
 
 }

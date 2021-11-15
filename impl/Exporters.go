@@ -24,6 +24,8 @@ import (
 	"github.com/ignalina/shredder/kafkaavro"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 )
 
 type  ExportProducer interface {
@@ -90,28 +92,66 @@ func (ep *KafkaExporter) Finish() error {
 }
 
 type AvroFileExporter struct {
-	fstc *FixedSizeTableChunk
+	Fstc     *FixedSizeTableChunk
+	FileName string
+	file     *os.File
 }
 
 func (ep *AvroFileExporter) Setup() error {
+
+	f, err := os.OpenFile(ep.FileName+strconv.Itoa(ep.Fstc.chunkr), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	ep.file=f
+
 	return nil
 }
 
 func (ep *AvroFileExporter) Export() error {
+
+
+	for _,abv := range ep.Fstc.avrobinaroValueBytes {
+		_,err:=ep.file.Write(abv[5:])
+		if(nil!=err) {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (ep *AvroFileExporter) Finish() error {
+	ep.file.Close()
+
 	return nil
 }
 
 
 func ExportersFactory(args []string, chunk *FixedSizeTableChunk) *ExportProducer {
 	var ptrExportProducer ExportProducer
-	ptrExportProducer = &KafkaExporter{
-		BootstrapServers:args[1] ,
-		Topic: os.Args[5],
-		Fstc: chunk,
+	var httpType bool
+	var proto string
+	var url string
+
+	url=args[1]
+	httpType,proto=extractHttpPrefix(url)
+
+	if (httpType) {
+		var ip string
+
+		ip=strings.TrimPrefix(url,proto)
+
+		ptrExportProducer = &KafkaExporter{
+			BootstrapServers: ip,
+			Topic:            os.Args[5],
+			Fstc:             chunk,
+		}
+	} else if(!httpType) {
+		ptrExportProducer = &AvroFileExporter{
+			Fstc:             chunk,
+			FileName: url,
+		}
 
 	}
 
@@ -120,4 +160,18 @@ func ExportersFactory(args []string, chunk *FixedSizeTableChunk) *ExportProducer
 
 }
 
+func extractHttpPrefix(myString string) (bool,string) {
+	var proto string
+	var theType bool
+
+	if(strings.HasPrefix(myString,"http://")) {
+		proto="http://"
+		theType=true
+	} else if(strings.HasPrefix(myString,"https://" )) {
+		proto="https://"
+		theType=true
+	}
+
+	return theType,proto
+}
 
