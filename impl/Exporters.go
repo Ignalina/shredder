@@ -21,6 +21,8 @@ package impl
 
 import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/hamba/avro"
+	"github.com/hamba/avro/ocf"
 	"github.com/ignalina/shredder/kafkaavro"
 	"net/url"
 	"os"
@@ -30,7 +32,7 @@ import (
 
 type  ExportProducer interface {
     Setup() error
-	Export() error
+	ExportRow() error
 	Finish() error
 }
 
@@ -63,21 +65,31 @@ func (ep *KafkaExporter) Setup() error {
 		kafkaavro.WithSchemaRegistryURL(&srUrl),
 	)
 
+	ep.C=make(chan kafka.Event)
+
 	return err
 }
 
-func (ep *KafkaExporter) Export() error {
-	// send to kafka. NOTE: This could have been been started in earlier loop...
-	//
-	c := make(chan kafka.Event)
-	ep.C=c
-	for _,abv := range ep.Fstc.avrobinaroValueBytes {
-		ep.producer.ProduceFast("string", abv,c)
+
+func (ep *KafkaExporter) ExportRow() error {
+
+		binaryValue, err := avro.Marshal(*ep.Fstc.fixedSizeTable.schema, ep.Fstc.recordStructInstance.Addr().Interface())
+		if err != nil {
+		return err
 	}
 
-	return nil
-}
+		binaryMsg := make([]byte, 0, len(binaryValue)+5)
+		// first byte is magic byte, always 0 for now
+		binaryMsg = append(binaryMsg, byte(0))
+		// 4-byte schema ID as returned by the Schema Registry
+		binaryMsg = append(binaryMsg, ep.Fstc.fixedSizeTable.binarySchemaId...)
+		// avro serialized data in Avro’s binary encoding
+		binaryMsg = append(binaryMsg, binaryValue...)
 
+     	ep.producer.ProduceFast("string", binaryMsg,ep.C)
+
+		return nil
+}
 
 func (ep *KafkaExporter) Finish() error {
 	// Wait for a successfull kafka transmission
@@ -95,6 +107,7 @@ type AvroFileExporter struct {
 	Fstc     *FixedSizeTableChunk
 	FileName string
 	file     *os.File
+	enc      *ocf.Encoder
 }
 
 func (ep *AvroFileExporter) Setup() error {
@@ -105,18 +118,16 @@ func (ep *AvroFileExporter) Setup() error {
 	}
 	ep.file=f
 
-	return nil
+	ep.enc, err = ocf.NewEncoder("ep.Fstc.fixedSizeTable.schema" , ep.file, ocf.WithCodec(ocf.Snappy))
+
+
+	return err
 }
 
-func (ep *AvroFileExporter) Export() error {
 
+func (ep *AvroFileExporter) ExportRow() error {
 
-	for _,abv := range ep.Fstc.avrobinaroValueBytes {
-		_,err:=ep.file.Write(abv[5:])
-		if(nil!=err) {
-			return err
-		}
-	}
+	ep.enc.Encode(ep.Fstc.recordStructInstance.Addr().Interface())
 
 	return nil
 }

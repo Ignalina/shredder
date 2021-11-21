@@ -79,7 +79,6 @@ func PrintPerfomance( elapsed  time.Duration,fst *FixedSizeTable) {
 
 	fmt.Println("Time spent toReadChunks :",fst.DurationReadChunk.Seconds()/fcores,"s")
 	fmt.Println("Time spent toAvro       :",toAvro,"s")
-	fmt.Println("Time spent toExport      :",fst.DurationToExport.Seconds()/fcores,"s")
-	fmt.Println("Time spent DoneExport      :",fst.DurationDoneExport.Seconds(),"s")
+	fmt.Println("Time spent WaitDoneExport      :",fst.DurationDoneExport.Seconds(),"s")
 
 }

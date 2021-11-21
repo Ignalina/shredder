@@ -70,6 +70,7 @@ type FixedSizeTable struct {
 	TableChunks       []FixedSizeTableChunk
 	row               *FixedRow
 	schema            *avro.Schema
+	schemaAsString    string
 	SchemaID          int
 	Schemaregistry    string
 	wg                *sync.WaitGroup
@@ -132,27 +133,36 @@ func CreateSchemaFromFile(schemaFilePath string) (*avro.Schema,error) {
 	return &avroSchema,err
 }
 
-func CreateRowFromSchema(schemaFilePath string) *FixedRow {
-
-	var fixedRow FixedRow
-	var columnLen float64
-	var columnName, columnType string
-
-	f, e := os.Open(schemaFilePath)
+func readFileToString (filePath string) (error,string) {
+	f, e := os.Open(filePath)
 	if e != nil {
-		panic(e)
+		return e,""
+
 	}
 	defer f.Close()
 	bu := new(strings.Builder)
 	io.Copy(bu, f)
 
+	return nil,bu.String()
+}
+
+func CreateRowFromSchema(schemaFilePath string) (error,*FixedRow) {
+
+	var fixedRow FixedRow
+	var columnLen float64
+	var columnName, columnType string
+
+	err ,schemaAsString := readFileToString(schemaFilePath)
+	if(nil!=err) {
+		return err,nil
+	}
 
 	var v interface{}
  	sf:=[]reflect.StructField{}
 	ff:=[]FixedField{}
 
 	// Unmarshal or Decode the JSON to the interface.
-	json.Unmarshal([]byte(bu.String()), &v)
+	json.Unmarshal([]byte(schemaAsString), &v)
 	data := v.(map[string]interface{})
 
 	for k, v := range data {
@@ -202,7 +212,7 @@ func CreateRowFromSchema(schemaFilePath string) *FixedRow {
 	fixedRow.FixedField=ff
 	fixedRow.recordStruct = reflect.StructOf(sf)
 
-	return &fixedRow
+	return nil,&fixedRow
 }
 
 
@@ -246,7 +256,7 @@ func (fstc *FixedSizeTableChunk) CreateColumBuilders() bool {
 	}
 	return true
 }
-func (fstc *FixedSizeTableChunk) appendAvroBinary( ) ( error) {
+func (fstc *FixedSizeTableChunk) appendAvroBinary( )  error {
 
 // TODO: what if we could have the marhsalling done to a specifed array with the first 5 bytes with the header...
 
@@ -274,8 +284,12 @@ func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string, arg
 	fst.schema,_ = CreateSchemaFromFile(fst.SchemaFilePath)
 	fst.binarySchemaId = make([]byte, 4)
 	binary.BigEndian.PutUint32(fst.binarySchemaId, uint32(fst.SchemaID))
+	var err error
+	if(err!=nil) {
+		return err
+	}
 
-	fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
+	err,fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
 
 	fst.wg = &sync.WaitGroup {}
 	return ParalizeChunks(fst ,fileName,args)
@@ -385,16 +399,11 @@ func (fstc *FixedSizeTableChunk) process() {
 		for ci, _ := range fstc.fixedSizeTable.row.FixedField {
 			fstc.columnBuilders[ci].ParseValue(substring[ci].sub)
 		}
-		fstc.appendAvroBinary()
+		fstc.exporter.ExportRow()
 
 	}
 	fstc.LinesParsed=lineCnt
 	fstc.durationToAvro=time.Since(startToAvro)
-
-	startToExport:=time.Now()
-	fstc.exporter.Export()
-	fstc.durationToExport =time.Since(startToExport)
-
 
 }
 
