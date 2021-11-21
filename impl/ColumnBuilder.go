@@ -346,7 +346,7 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 		fst.TableChunks[chunkNr].bytes=fst.Bytes[p1:p2]
 		p1=p2
 		fst.wg.Add(1)
-		fst.TableChunks[chunkNr].process()
+		go fst.TableChunks[chunkNr].process()
 		chunkNr++
 	}
 
