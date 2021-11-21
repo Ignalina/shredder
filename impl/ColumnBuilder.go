@@ -115,17 +115,10 @@ func findLastNL(bytes []byte) int {
 	return 0
 }
 
-func CreateSchemaFromFile(schemaFilePath string) (*avro.Schema,error) {
-	f, e := os.Open(schemaFilePath)
-	if e != nil {
-		panic(e)
-	}
-	defer f.Close()
-	bu := new(strings.Builder)
-	io.Copy(bu, f)
-	log.Println(bu.String())
+func CreateSchema(schemaAsString string) (*avro.Schema,error) {
 
-	avroSchema, err := avro.Parse(bu.String())
+
+	avroSchema, err := avro.Parse(schemaAsString)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -133,29 +126,23 @@ func CreateSchemaFromFile(schemaFilePath string) (*avro.Schema,error) {
 	return &avroSchema,err
 }
 
-func readFileToString (filePath string) (error,string) {
-	f, e := os.Open(filePath)
-	if e != nil {
-		return e,""
-
+func readFileToString (filePath string) (string,error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "",err
 	}
 	defer f.Close()
 	bu := new(strings.Builder)
 	io.Copy(bu, f)
 
-	return nil,bu.String()
+	return bu.String(),nil
 }
 
-func CreateRowFromSchema(schemaFilePath string) (error,*FixedRow) {
+func CreateRowFromSchema(schemaAsString string) (*FixedRow,error) {
 
 	var fixedRow FixedRow
 	var columnLen float64
 	var columnName, columnType string
-
-	err ,schemaAsString := readFileToString(schemaFilePath)
-	if(nil!=err) {
-		return err,nil
-	}
 
 	var v interface{}
  	sf:=[]reflect.StructField{}
@@ -212,7 +199,7 @@ func CreateRowFromSchema(schemaFilePath string) (error,*FixedRow) {
 	fixedRow.FixedField=ff
 	fixedRow.recordStruct = reflect.StructOf(sf)
 
-	return nil,&fixedRow
+	return &fixedRow,nil
 }
 
 
@@ -278,18 +265,25 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( )  error {
 	return nil
 }
 
-// Read chunks of file and process them in go routine after each chunk read. Slow disk is non non zero disk like sans etc
+// Read chunks of file and process them in go routine after each chunk read. Slow disk is non non zerocopy disk like sans etc
 func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string, args []string) error {
+	var err error
 
-	fst.schema,_ = CreateSchemaFromFile(fst.SchemaFilePath)
+	fst.schemaAsString,err = readFileToString(fst.SchemaFilePath)
+	fst.schema,err = CreateSchema(fst.schemaAsString)
+	if(nil!=err) {
+		return err
+	}
 	fst.binarySchemaId = make([]byte, 4)
 	binary.BigEndian.PutUint32(fst.binarySchemaId, uint32(fst.SchemaID))
-	var err error
 	if(err!=nil) {
 		return err
 	}
 
-	err,fst.row =  CreateRowFromSchema(fst.SchemaFilePath)
+	fst.row,err =  CreateRowFromSchema(fst.schemaAsString)
+	if(nil!=err) {
+		return err
+	}
 
 	fst.wg = &sync.WaitGroup {}
 	return ParalizeChunks(fst ,fileName,args)
@@ -346,7 +340,7 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 		fst.TableChunks[chunkNr].bytes=fst.Bytes[p1:p2]
 		p1=p2
 		fst.wg.Add(1)
-		go fst.TableChunks[chunkNr].process()
+		fst.TableChunks[chunkNr].process()
 		chunkNr++
 	}
 

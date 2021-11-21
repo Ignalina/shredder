@@ -112,13 +112,13 @@ type AvroFileExporter struct {
 
 func (ep *AvroFileExporter) Setup() error {
 
-	f, err := os.OpenFile(ep.FileName+strconv.Itoa(ep.Fstc.chunkr), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(ep.FileName+strconv.Itoa(ep.Fstc.chunkr), os.O_TRUNC |os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	ep.file=f
-
-	ep.enc, err = ocf.NewEncoder("ep.Fstc.fixedSizeTable.schema" , ep.file, ocf.WithCodec(ocf.Snappy))
+// TODO snappy should be configurable
+	ep.enc, err = ocf.NewEncoder(ep.Fstc.fixedSizeTable.schemaAsString , ep.file, ocf.WithCodec(ocf.Snappy))
 
 
 	return err
