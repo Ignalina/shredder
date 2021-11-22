@@ -14,11 +14,31 @@ Notes current features/limitations:
 shredder.exe <kafka broker> <chemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file>
 ```
 
-# Performance example
-Hardware: 6 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
+# Performance example 1 using 12 cores ( output snappy avro files 30 columns)
+Hardware: 12 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
 Datafile: 1.3Gb , 30 columns, total 528 chars (runes)  row width.
 
 ```console
+rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder /tmp/avrofiles 10.1.1.90:8081 schema1.json 2 table_x14 12 test.last111
+Schema = {
+"type": "record",
+"name": "weblog",
+"fields" : [
+... <30 columns removed from readme >
+Time spend in total     : 1.845484353s  parsing  4960143  lines from  2620609413  bytes
+Troughput bytes/s total : 1.32GB /s
+Troughput lines/s total : 2.56M  Lines/s
+Troughput lines/s toAvro: 3.28M  Lines/s
+Time spent toReadChunks : 0.0282819985 s
+Time spent toAvro       : 1.4421747465 s
+Time spent WaitDoneExport      : 0.042694734 s
+```
+
+# Performance example 2 using 6 cores ( output avro to kafka 30 columns)
+Hardware: 6 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
+Datafile: 1.3Gb , 30 columns, total 528 chars (runes)  row width.
+```console
+
 rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 2 table_x14 8 test.last111
 Schema = {
 "type": "record",
@@ -34,6 +54,26 @@ Time spent toReadChunks : 0.0215806745 s
 Time spent toAvro       : 0.87478208175 s
 Time spent toKafka      : 0.59487903675 s
 ```
+
+# Performance example 3 using 48 cores ( output avro to kafka 30 columns)
+Hardware: 48 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 pro 7/5 Gb r/w sec.  
+Datafile: 1.3Gb , 30 columns, total 528 chars (runes)  row width.
+```console
+
+rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 2 table_x14 8 test.last111
+Schema = {
+"type": "record",
+"name": "weblog",``
+"fields" : [
+... <30 columns removed from readme >
+skipping footer
+Time spend in total     : 954.359385ms  parsing  4960143  lines from  2620609413  bytes
+Troughput bytes/s total : 2.56GB /s
+Troughput lines/s total : 4.96M  Lines/s
+Troughput lines/s toAvro: 9.03M  Lines/s
+Time spent toReadChunks : 0.0084119796875 s
+Time spent toAvro       : 0.5240676388958333 s
+Time spent WaitDoneExport      : 0.012015946 s```
 NOTE: Time spent ToKafka is the the transfer time from "Shredder" to librd the underlying the kafka client library)
 
 # Example schema

@@ -133,6 +133,8 @@ func (ep *AvroFileExporter) ExportRow() error {
 }
 
 func (ep *AvroFileExporter) Finish() error {
+    ep.enc.Flush()
+	ep.enc.Close()
 	ep.file.Close()
 
 	return nil
