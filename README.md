@@ -60,7 +60,7 @@ Hardware: 48 core (Amd Threadripper 5960X),1Gb kafka connection  , Samsung 980 p
 Datafile: 1.3Gb , 30 columns, total 528 chars (runes)  row width.
 ```console
 
-rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder 10.1.1.90:9092 10.1.1.90:8081 schema1.json 2 table_x14 8 test.last111
+rickard@Oden-Threadripper:~/GolandProjects/shredder2$ ./shredder /tmp/avrofiles 10.1.1.90:8081 schema1.json 2 table_x14 48 test.last111
 Schema = {
 "type": "record",
 "name": "weblog",``
