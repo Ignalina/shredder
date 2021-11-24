@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/inhies/go-bytesize"
 	"time"
+	"unicode/utf8"
 )
 
 type Substring struct {
@@ -49,11 +50,12 @@ func  getSplitBytePositions(fullString string,substring []Substring)  {
 
 		var runeLen int
 
-		for bytePos, _ := range fullString[firstByte:lastByte] {
+		for bytePos, runan := range fullString[firstByte:lastByte] {
 			runeLen++
 			if (runeLen==s.runeLen) {
-				substring[is].sub = fullString[firstByte:firstByte+bytePos+1]
-				firstByte=firstByte+bytePos+1
+                pos:=firstByte+bytePos+utf8.RuneLen(runan)
+				substring[is].sub = fullString[firstByte:pos]
+				firstByte=pos
 				break
 			}
 		}

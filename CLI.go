@@ -29,7 +29,7 @@ import (
 func main() {
 
         if(len(os.Args)!=8) {
-		println("Shredder (Unreleased Betha 2021-11-16 16:51)")
+		println("Shredder V1.0 2021-11-24 22:24")
 		println("Syntax       : shredder <http[s]://kafkabroker | /outputdir> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file> ")
 		println("example usage: shredder http://10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 tableXYZ_q123 1 test.data")
 		os.Exit(1)
