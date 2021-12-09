@@ -15,7 +15,7 @@
  * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+ */
 
 package impl
 
@@ -25,38 +25,38 @@ import (
 )
 
 type ColumnBuilderBoolean struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
 // make configurable
 func (c *ColumnBuilderBoolean) ParseValue(name string) bool {
-	boolChar:=name[0]
+	boolChar := name[0]
 	var ourBool bool
 
 	switch boolChar {
 	case uint8('J'):
-		ourBool=true
+		ourBool = true
 		break
 
 	case uint8('j'):
-		ourBool=true
+		ourBool = true
 		break
 
 	case uint8('Y'):
-		ourBool=true
+		ourBool = true
 		break
 	case uint8('y'):
-		ourBool=true
+		ourBool = true
 		break
 
 	case uint8('N'):
-		ourBool=false
+		ourBool = false
 		break
 
 	case uint8('n'):
-		ourBool=false
+		ourBool = false
 		break
 	}
 	c.recordStructInstance.Field(c.fieldnr).SetBool(ourBool)
@@ -68,8 +68,8 @@ func (c *ColumnBuilderBoolean) FinishColumn() bool {
 }
 
 type ColumnBuilderBytes struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
@@ -82,17 +82,16 @@ func (c ColumnBuilderBytes) FinishColumn() bool {
 	return true
 }
 
-
 type ColumnBuilderDouble struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
 func (c ColumnBuilderDouble) ParseValue(name string) bool {
 	floatNum, err := strconv.ParseFloat(name, 64)
 	c.recordStructInstance.Field(c.fieldnr).SetFloat(floatNum)
-	return (nil==err)
+	return (nil == err)
 }
 
 func (c ColumnBuilderDouble) FinishColumn() bool {
@@ -100,15 +99,15 @@ func (c ColumnBuilderDouble) FinishColumn() bool {
 }
 
 type ColumnBuilderFloat struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
 func (c ColumnBuilderFloat) ParseValue(name string) bool {
 	floatNum, err := strconv.ParseFloat(name, 32)
-	c.recordStructInstance.Field(c.fieldnr).SetFloat (floatNum)
-	return (nil==err)
+	c.recordStructInstance.Field(c.fieldnr).SetFloat(floatNum)
+	return (nil == err)
 }
 
 func (c ColumnBuilderFloat) FinishColumn() bool {
@@ -116,16 +115,16 @@ func (c ColumnBuilderFloat) FinishColumn() bool {
 }
 
 type ColumnBuilderLong struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
 func (c ColumnBuilderLong) ParseValue(name string) bool {
-	longNum, err := strconv.ParseInt(name,10, 64)
+	longNum, err := strconv.ParseInt(name, 10, 64)
 
 	c.recordStructInstance.Field(c.fieldnr).SetInt(longNum)
-	return (nil==err)
+	return (nil == err)
 }
 
 func (c ColumnBuilderLong) FinishColumn() bool {
@@ -133,15 +132,15 @@ func (c ColumnBuilderLong) FinishColumn() bool {
 }
 
 type ColumnBuilderInt struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
 func (c ColumnBuilderInt) ParseValue(name string) bool {
-	intNum, err := strconv.ParseInt(name,10, 32)
+	intNum, err := strconv.ParseInt(name, 10, 32)
 	c.recordStructInstance.Field(c.fieldnr).SetInt(intNum)
-	return (nil==err)
+	return (nil == err)
 }
 
 func (c ColumnBuilderInt) FinishColumn() bool {
@@ -149,8 +148,8 @@ func (c ColumnBuilderInt) FinishColumn() bool {
 }
 
 type ColumnBuilderString struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
@@ -163,19 +162,17 @@ func (c ColumnBuilderString) FinishColumn() bool {
 	return true
 }
 
-
 type ColumnBuilderDate struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
-
 func (c ColumnBuilderDate) ParseValue(name string) bool {
 
-	f,err:= DateStringT1ToUnix_microsecond(name)
+	f, err := DateStringT1ToUnix_microsecond(name)
 
-	if (err==nil) {
+	if (err == nil) {
 		return false
 	}
 	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
@@ -187,17 +184,16 @@ func (c ColumnBuilderDate) FinishColumn() bool {
 }
 
 type ColumnBuilderTimestapMillis struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
-
 func (c ColumnBuilderTimestapMillis) ParseValue(name string) bool {
 
-	f,err:= DateStringT1ToUnix_millisecond(name)
+	f, err := DateStringT1ToUnix_millisecond(name)
 
-	if (err==nil) {
+	if (err == nil) {
 		return false
 	}
 	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
@@ -209,26 +205,19 @@ func (c ColumnBuilderTimestapMillis) FinishColumn() bool {
 }
 
 type ColumnBuilderTimestapMicros struct {
-	fixedField *FixedField
-	fieldnr int
+	fixedField           *FixedField
+	fieldnr              int
 	recordStructInstance *reflect.Value
 }
 
-
 func (c ColumnBuilderTimestapMicros) ParseValue(name string) bool {
 
-	f,err:= DateStringT1ToUnix_microsecond(name)
+	f, err := DateStringT1ToUnix_microsecond(name)
 
-	if (err!=nil) {
+	if (err != nil) {
 		return false
 	}
 	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
 	return true
 }
-
-func (c ColumnBuilderTimestapMicros) FinishColumn() bool {
-	return true
-}
-
-
 

@@ -37,58 +37,57 @@ import (
 )
 
 type FixedField struct {
-	Len int
+	Len        int
 	ColumnType string
 }
 
 type FixedRow struct {
-	FixedField []FixedField  // For parsing
+	FixedField   []FixedField // For parsing
 	recordStruct reflect.Type // For Avro serializing
 }
 
 type avroBinaryBytes []byte
 
 type FixedSizeTableChunk struct {
-	chunkr int
-	fixedSizeTable *FixedSizeTable
-	columnBuilders []ColumnBuilder
-	bytes []byte
+	chunkr               int
+	fixedSizeTable       *FixedSizeTable
+	columnBuilders       []ColumnBuilder
+	bytes                []byte
 	recordStructInstance reflect.Value
 	avrobinaroValueBytes []avroBinaryBytes
 
-    exporter			 ExportProducer
+	exporter ExportProducer
 
-	LinesParsed int
+	LinesParsed       int
 	durationReadChunk time.Duration
-	durationToAvro   time.Duration
-	durationToExport time.Duration
+	durationToAvro    time.Duration
+	durationToExport  time.Duration
 }
 
 type FixedSizeTable struct {
-	Args  []string
-	Bytes []byte
-	TableChunks       []FixedSizeTableChunk
-	row               *FixedRow
-	schema            *avro.Schema
-	schemaAsString    string
-	SchemaID          int
-	Schemaregistry    string
-	wg                *sync.WaitGroup
-	SchemaFilePath    string
-	Cores             int
-	LinesParsed       int
-	DurationReadChunk time.Duration
+	Args               []string
+	Bytes              []byte
+	TableChunks        []FixedSizeTableChunk
+	row                *FixedRow
+	schema             *avro.Schema
+	schemaAsString     string
+	SchemaID           int
+	Schemaregistry     string
+	wg                 *sync.WaitGroup
+	SchemaFilePath     string
+	Cores              int
+	LinesParsed        int
+	DurationReadChunk  time.Duration
 	DurationToAvro     time.Duration
 	DurationToExport   time.Duration
 	DurationDoneExport time.Duration
-	binarySchemaId    []byte
+	binarySchemaId     []byte
 }
 
-type  ColumnBuilder interface {
+type ColumnBuilder interface {
 	ParseValue(name string) bool
 	FinishColumn() bool
 }
-
 
 func (f FixedRow) CalRowLength() int {
 	sum := 0
@@ -96,17 +95,17 @@ func (f FixedRow) CalRowLength() int {
 	for _, num := range f.FixedField {
 		sum += num.Len
 	}
-	return sum+2
+	return sum + 2
 }
 
 func findLastNL(bytes []byte) int {
-	p2:= len(bytes)
-	if(0==p2) {
+	p2 := len(bytes)
+	if 0 == p2 {
 		return -1
 	}
 
-	for (p2 >2)  {
-		if(bytes[p2-2]==0x0d && bytes[p2-1]==0x0a) {
+	for p2 > 2 {
+		if bytes[p2-2] == 0x0d && bytes[p2-1] == 0x0a {
 			return p2
 		}
 		p2--
@@ -115,38 +114,37 @@ func findLastNL(bytes []byte) int {
 	return 0
 }
 
-func CreateSchema(schemaAsString string) (*avro.Schema,error) {
-
+func CreateSchema(schemaAsString string) (*avro.Schema, error) {
 
 	avroSchema, err := avro.Parse(schemaAsString)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	return &avroSchema,err
+	return &avroSchema, err
 }
 
-func readFileToString (filePath string) (string,error) {
+func readFileToString(filePath string) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return "",err
+		return "", err
 	}
 	defer f.Close()
 	bu := new(strings.Builder)
 	io.Copy(bu, f)
 
-	return bu.String(),nil
+	return bu.String(), nil
 }
 
-func CreateRowFromSchema(schemaAsString string) (*FixedRow,error) {
+func CreateRowFromSchema(schemaAsString string) (*FixedRow, error) {
 
 	var fixedRow FixedRow
 	var columnLen float64
 	var columnName, columnType string
 
 	var v interface{}
- 	sf:=[]reflect.StructField{}
-	ff:=[]FixedField{}
+	sf := []reflect.StructField{}
+	ff := []FixedField{}
 
 	// Unmarshal or Decode the JSON to the interface.
 	json.Unmarshal([]byte(schemaAsString), &v)
@@ -156,10 +154,10 @@ func CreateRowFromSchema(schemaAsString string) (*FixedRow,error) {
 		switch v := v.(type) {
 		case []interface{}:
 
-			nrOfCols:=len(v)
+			nrOfCols := len(v)
 
-			ff=make([]FixedField, nrOfCols)
-			sf=make([]reflect.StructField,nrOfCols)
+			ff = make([]FixedField, nrOfCols)
+			sf = make([]reflect.StructField, nrOfCols)
 
 			for i, u := range v {
 				maps := u.(map[string]interface{})
@@ -180,42 +178,41 @@ func CreateRowFromSchema(schemaAsString string) (*FixedRow,error) {
 					}
 				}
 
-				ff[i]= FixedField{
-						Len:   int(columnLen),
-						ColumnType: columnType,  // logical column type , for column parser factory.
-					}
+				ff[i] = FixedField{
+					Len:        int(columnLen),
+					ColumnType: columnType, // logical column type , for column parser factory.
+				}
 
-				sf[i]= reflect.StructField{
-					Name:      strings.Title(columnName),
-					Type:      getGoTypeFromAvroType(columnType),
+				sf[i] = reflect.StructField{
+					Name: strings.Title(columnName),
+					Type: getGoTypeFromAvroType(columnType),
 				}
 
 			}
 
 		default:
-			log.Println("ignored (unknown)",k, v )
+			log.Println("ignored (unknown)", k, v)
 		}
 	}
-	fixedRow.FixedField=ff
+	fixedRow.FixedField = ff
 	fixedRow.recordStruct = reflect.StructOf(sf)
 
-	return &fixedRow,nil
+	return &fixedRow, nil
 }
-
 
 func getGoTypeFromAvroType(columnType string) reflect.Type {
 
-	 mapping := map[string] reflect.Type {
-		"boolean" : reflect.TypeOf(true),
-		"Bytes": reflect.TypeOf([]byte("")),
-		"float": reflect.TypeOf(float32(0)),
-		"double": reflect.TypeOf(float64(0)),
-		"long": reflect.TypeOf(int64(0)),
-		"int": reflect.TypeOf(int32(0)),
-		"string": reflect.TypeOf(string("")),
-		"date": reflect.TypeOf(int32(0)),
-		"time-millis": reflect.TypeOf(int32(0)),
-		"time-micros": reflect.TypeOf(int64(0)),
+	mapping := map[string]reflect.Type{
+		"boolean":          reflect.TypeOf(true),
+		"Bytes":            reflect.TypeOf([]byte("")),
+		"float":            reflect.TypeOf(float32(0)),
+		"double":           reflect.TypeOf(float64(0)),
+		"long":             reflect.TypeOf(int64(0)),
+		"int":              reflect.TypeOf(int32(0)),
+		"string":           reflect.TypeOf(string("")),
+		"date":             reflect.TypeOf(int32(0)),
+		"time-millis":      reflect.TypeOf(int32(0)),
+		"time-micros":      reflect.TypeOf(int64(0)),
 		"timestamp-millis": reflect.TypeOf(int64(0)),
 		"timestamp-micros": reflect.TypeOf(int64(0)),
 	}
@@ -223,29 +220,28 @@ func getGoTypeFromAvroType(columnType string) reflect.Type {
 	return mapping[columnType]
 }
 
-
 func (fstc *FixedSizeTableChunk) CreateColumBuilders() bool {
-	fstc.columnBuilders=make([]ColumnBuilder, len(fstc.fixedSizeTable.row.FixedField))
+	fstc.columnBuilders = make([]ColumnBuilder, len(fstc.fixedSizeTable.row.FixedField))
 
 	var err error
 
-	err=fstc.exporter.Setup()
+	err = fstc.exporter.Setup()
 
-	if(nil!=err) {
+	if nil != err {
 		return false
 	}
 
-	v:=	reflect.New(fstc.fixedSizeTable.row.recordStruct).Elem()
-	fstc.recordStructInstance=v
+	v := reflect.New(fstc.fixedSizeTable.row.recordStruct).Elem()
+	fstc.recordStructInstance = v
 
 	for i, ff := range fstc.fixedSizeTable.row.FixedField {
-		fstc.columnBuilders[i]=*CreateColumBuilder(i,&ff,ff.Len,&fstc.recordStructInstance)
+		fstc.columnBuilders[i] = *CreateColumBuilder(i, &ff, ff.Len, &fstc.recordStructInstance)
 	}
 	return true
 }
-func (fstc *FixedSizeTableChunk) appendAvroBinary( )  error {
+func (fstc *FixedSizeTableChunk) appendAvroBinary() error {
 
-// TODO: what if we could have the marhsalling done to a specifed array with the first 5 bytes with the header...
+	// TODO: what if we could have the marhsalling done to a specifed array with the first 5 bytes with the header...
 
 	binaryValue, err := avro.Marshal(*fstc.fixedSizeTable.schema, fstc.recordStructInstance.Addr().Interface())
 	if err != nil {
@@ -260,7 +256,7 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( )  error {
 	// avro serialized data in Avro’s binary encoding
 	binaryMsg = append(binaryMsg, binaryValue...)
 
-	fstc.avrobinaroValueBytes=append(fstc.avrobinaroValueBytes,binaryMsg)
+	fstc.avrobinaroValueBytes = append(fstc.avrobinaroValueBytes, binaryMsg)
 
 	return nil
 }
@@ -269,25 +265,24 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary( )  error {
 func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string, args []string) error {
 	var err error
 
-	fst.schemaAsString,err = readFileToString(fst.SchemaFilePath)
-	fst.schema,err = CreateSchema(fst.schemaAsString)
-	if(nil!=err) {
+	fst.schemaAsString, err = readFileToString(fst.SchemaFilePath)
+	fst.schema, err = CreateSchema(fst.schemaAsString)
+	if nil != err {
 		return err
 	}
 	fst.binarySchemaId = make([]byte, 4)
 	binary.BigEndian.PutUint32(fst.binarySchemaId, uint32(fst.SchemaID))
-	if(err!=nil) {
+	if err != nil {
 		return err
 	}
 
-	fst.row,err =  CreateRowFromSchema(fst.schemaAsString)
-	if(nil!=err) {
+	fst.row, err = CreateRowFromSchema(fst.schemaAsString)
+	if nil != err {
 		return err
 	}
 
-	fst.wg = &sync.WaitGroup {}
-	return ParalizeChunks(fst ,fileName,args)
-
+	fst.wg = &sync.WaitGroup{}
+	return ParalizeChunks(fst, fileName, args)
 
 }
 
@@ -299,96 +294,94 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 		return err
 	}
 	defer file.Close()
-	fi,_:=file.Stat()
+	fi, _ := file.Stat()
 
-	fst.Bytes =make([]byte, fi.Size())
-	fst.TableChunks=make([]FixedSizeTableChunk, fst.Cores)
+	fst.Bytes = make([]byte, fi.Size())
+	fst.TableChunks = make([]FixedSizeTableChunk, fst.Cores)
 
-	chunkSize:=fi.Size()/int64(fst.Cores)
-	rowlength:=int64(fst.row.CalRowLength())
+	chunkSize := fi.Size() / int64(fst.Cores)
+	rowlength := int64(fst.row.CalRowLength())
 
-	if(chunkSize<int64(rowlength)) {
-		chunkSize=int64(rowlength)
+	if chunkSize < int64(rowlength) {
+		chunkSize = int64(rowlength)
 	}
 
-	goon:=true
-	chunkNr:=0
-	p1:=0
-	p2:=0
+	goon := true
+	chunkNr := 0
+	p1 := 0
+	p2 := 0
 
 	for goon {
 
-		fst.TableChunks[chunkNr]=FixedSizeTableChunk {fixedSizeTable: fst , chunkr: chunkNr}
+		fst.TableChunks[chunkNr] = FixedSizeTableChunk{fixedSizeTable: fst, chunkr: chunkNr}
 		// Uggly way to init two way pointer. NOTE: refactor !
-		fst.TableChunks[chunkNr].exporter=*ExportersFactory(os.Args,&fst.TableChunks[chunkNr])
+		fst.TableChunks[chunkNr].exporter = *ExportersFactory(os.Args, &fst.TableChunks[chunkNr])
 
 		fst.TableChunks[chunkNr].CreateColumBuilders()
 
-		i1:=int(chunkSize)*chunkNr
-		i2:=int(chunkSize)*(chunkNr+1)
-		if(chunkNr==(fst.Cores-1)) {
-			i2= len(fst.Bytes)
+		i1 := int(chunkSize) * chunkNr
+		i2 := int(chunkSize) * (chunkNr + 1)
+		if chunkNr == (fst.Cores - 1) {
+			i2 = len(fst.Bytes)
 		}
 		buf := fst.Bytes[i1:i2]
-		startReadChunk:=time.Now()
-		nread,_:=io.ReadFull(file,buf)
-		fst.TableChunks[chunkNr].durationReadChunk=time.Since(startReadChunk)
+		startReadChunk := time.Now()
+		nread, _ := io.ReadFull(file, buf)
+		fst.TableChunks[chunkNr].durationReadChunk = time.Since(startReadChunk)
 		buf = buf[:nread]
-		goon = i2<len(fst.Bytes)
-		p2 = i1+findLastNL(buf)
+		goon = i2 < len(fst.Bytes)
+		p2 = i1 + findLastNL(buf)
 
-		fst.TableChunks[chunkNr].bytes=fst.Bytes[p1:p2]
-		p1=p2
+		fst.TableChunks[chunkNr].bytes = fst.Bytes[p1:p2]
+		p1 = p2
 		fst.wg.Add(1)
-		go fst.TableChunks[chunkNr].process()
+		fst.TableChunks[chunkNr].process()
 		chunkNr++
 	}
 
-	fst.wg.Wait()  // Waiting for ALL pararell routes to finish
+	fst.wg.Wait() // Waiting for ALL pararell routes to finish
 
-
-// Sum up some statitics
+	// Sum up some statitics
 	for _, tableChunk := range fst.TableChunks {
-		fst.DurationToAvro+=tableChunk.durationToAvro
-		fst.DurationReadChunk+=tableChunk.durationReadChunk
-		fst.DurationToExport +=tableChunk.durationToExport
+		fst.DurationToAvro += tableChunk.durationToAvro
+		fst.DurationReadChunk += tableChunk.durationReadChunk
+		fst.DurationToExport += tableChunk.durationToExport
 		fst.LinesParsed += tableChunk.LinesParsed
 	}
 
-	startWaitDoneExport:=time.Now()
+	startWaitDoneExport := time.Now()
 
 	for _, tableChunk := range fst.TableChunks {
 		err := tableChunk.exporter.Finish()
-		if (nil != err) {
+		if nil != err {
 			return err
 		}
 	}
-	fst.DurationDoneExport =time.Since(startWaitDoneExport)
+	fst.DurationDoneExport = time.Since(startWaitDoneExport)
 
 	return nil
 }
 
-
 func (fstc *FixedSizeTableChunk) process() {
-	startToAvro:=time.Now()
+	startToAvro := time.Now()
 	defer fstc.fixedSizeTable.wg.Done()
 	re := bytes.NewReader(fstc.bytes)
-//	decodingReader := transform.NewReader(re, charmap.ISO8859_1.NewDecoder())
+	//	decodingReader := transform.NewReader(re, charmap.ISO8859_1.NewDecoder())
 
 	scanner := bufio.NewScanner(re)
 
-	substring:=createSubstring(fstc.fixedSizeTable)
+	substring := createSubstring(fstc.fixedSizeTable)
 
 	lineCnt := 0
 	for scanner.Scan() {
 		line := scanner.Text()
-		if(len(line)>12 && line[:12]=="************") {
-			fmt.Println("skipping footer");
+		if len(line) > 12 && line[:12] == "************" {
+			fmt.Println("skipping footer")
 			break
 		}
 		lineCnt++
 
-		getSplitBytePositions(line,substring)
+		getSplitBytePositions(line, substring)
 
 		for ci, _ := range fstc.fixedSizeTable.row.FixedField {
 			fstc.columnBuilders[ci].ParseValue(substring[ci].sub)
@@ -396,172 +389,164 @@ func (fstc *FixedSizeTableChunk) process() {
 		fstc.exporter.ExportRow()
 
 	}
-	fstc.LinesParsed=lineCnt
-	fstc.durationToAvro=time.Since(startToAvro)
+	fstc.LinesParsed = lineCnt
+	fstc.durationToAvro = time.Since(startToAvro)
 
 }
-
-
 
 var lo = &time.Location{}
 
-
-
 // 2020-07-09-09.59.59.99375
-func DateStringT1ToUnix_millisecond(dateString string) (int64,error) {
+func DateStringT1ToUnix_millisecond(dateString string) (int64, error) {
 
-	var year64,month64,day64,hour64,minute64,second64,nanoSec64 int64
+	var year64, month64, day64, hour64, minute64, second64, nanoSec64 int64
 	var err error
 
-	year64,err = strconv.ParseInt(dateString[:4], 10, 32)
+	year64, err = strconv.ParseInt(dateString[:4], 10, 32)
 
-	if(nil!=err) {
-		return 0,err
+	if nil != err {
+		return 0, err
 	}
 
-	month64,err = strconv.ParseInt(dateString[5:7], 10, 8)
+	month64, err = strconv.ParseInt(dateString[5:7], 10, 8)
 
-	if(nil!=err) {
-		return 0,err
+	if nil != err {
+		return 0, err
 	}
 
-	day64,err = strconv.ParseInt(dateString[8:10], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	day64, err = strconv.ParseInt(dateString[8:10], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	hour64,err = strconv.ParseInt(dateString[11:13], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	hour64, err = strconv.ParseInt(dateString[11:13], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	minute64,err = strconv.ParseInt(dateString[14:16], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	minute64, err = strconv.ParseInt(dateString[14:16], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	second64,err = strconv.ParseInt(dateString[17:19], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	second64, err = strconv.ParseInt(dateString[17:19], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-
-	nanoSec64,err = strconv.ParseInt(dateString[20:23], 10, 8)
-	nanoSec64=nanoSec64*1000000
-	if(nil!=err) {
-		return 0,err
+	nanoSec64, err = strconv.ParseInt(dateString[20:23], 10, 8)
+	nanoSec64 = nanoSec64 * 1000000
+	if nil != err {
+		return 0, err
 	}
 
 	var ti time.Time
 
-	ti=time.Date(int(year64), time.Month(month64) , int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
+	ti = time.Date(int(year64), time.Month(month64), int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
 
-	return ti.Unix(),nil
+	return ti.Unix(), nil
 
 }
 
 // 2020-07-09-09.59.59.99375
-func DateStringT1ToUnix_microsecond(dateString string) (int64,error) {
+func DateStringT1ToUnix_microsecond(dateString string) (int64, error) {
 
-	var year64,month64,day64,hour64,minute64,second64,nanoSec64 int64
+	var year64, month64, day64, hour64, minute64, second64, nanoSec64 int64
 	var err error
 
-	year64,err = strconv.ParseInt(dateString[:4], 10, 32)
+	year64, err = strconv.ParseInt(dateString[:4], 10, 32)
 
-	if(nil!=err) {
-		return 0,err
+	if nil != err {
+		return 0, err
 	}
 
-	month64,err = strconv.ParseInt(dateString[5:7], 10, 8)
+	month64, err = strconv.ParseInt(dateString[5:7], 10, 8)
 
-	if(nil!=err) {
-		return 0,err
+	if nil != err {
+		return 0, err
 	}
 
-	day64,err = strconv.ParseInt(dateString[8:10], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	day64, err = strconv.ParseInt(dateString[8:10], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	hour64,err = strconv.ParseInt(dateString[11:13], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	hour64, err = strconv.ParseInt(dateString[11:13], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	minute64,err = strconv.ParseInt(dateString[14:16], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	minute64, err = strconv.ParseInt(dateString[14:16], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	second64,err = strconv.ParseInt(dateString[17:19], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	second64, err = strconv.ParseInt(dateString[17:19], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-
-	nanoSec64,err = strconv.ParseInt(dateString[20:26], 10, 8)
-	nanoSec64=nanoSec64*1000
-	if(nil!=err) {
-		return 0,err
+	nanoSec64, err = strconv.ParseInt(dateString[20:26], 10, 32)
+	if nil != err {
+		return 0, err
 	}
 
 	var ti time.Time
 
-	ti=time.Date(int(year64), time.Month(month64) , int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
+	ti = time.Date(int(year64), time.Month(month64), int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
 
-	return ti.Unix(),nil
+	return ti.Unix(), nil
 
 }
 
-func DateStringT1ToUnix_nanosecond(dateString string) (int64,error) {
+func DateStringT1ToUnix_nanosecond(dateString string) (int64, error) {
 
-	var year64,month64,day64,hour64,minute64,second64,nanoSec64 int64
+	var year64, month64, day64, hour64, minute64, second64, nanoSec64 int64
 	var err error
 
-	year64,err = strconv.ParseInt(dateString[:4], 10, 32)
+	year64, err = strconv.ParseInt(dateString[:4], 10, 32)
 
-	if(nil!=err) {
-		return 0,err
+	if nil != err {
+		return 0, err
 	}
 
-	month64,err = strconv.ParseInt(dateString[5:7], 10, 8)
+	month64, err = strconv.ParseInt(dateString[5:7], 10, 8)
 
-	if(nil!=err) {
-		return 0,err
+	if nil != err {
+		return 0, err
 	}
 
-	day64,err = strconv.ParseInt(dateString[8:10], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	day64, err = strconv.ParseInt(dateString[8:10], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	hour64,err = strconv.ParseInt(dateString[11:13], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	hour64, err = strconv.ParseInt(dateString[11:13], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	minute64,err = strconv.ParseInt(dateString[14:16], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	minute64, err = strconv.ParseInt(dateString[14:16], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
-	second64,err = strconv.ParseInt(dateString[17:19], 10, 8)
-	if(nil!=err) {
-		return 0,err
+	second64, err = strconv.ParseInt(dateString[17:19], 10, 8)
+	if nil != err {
+		return 0, err
 	}
 
+	nanoSec64, err = strconv.ParseInt(dateString[20:29], 10, 8)
 
-	nanoSec64,err = strconv.ParseInt(dateString[20:29], 10, 8)
-
-	if(nil!=err) {
-		return 0,err
+	if nil != err {
+		return 0, err
 	}
 
 	var ti time.Time
 
-	ti=time.Date(int(year64), time.Month(month64) , int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
+	ti = time.Date(int(year64), time.Month(month64), int(day64), int(hour64), int(minute64), int(second64), int(nanoSec64), lo)
 
-	return ti.Unix(),nil
+	return ti.Unix(), nil
 
 }
 
@@ -572,10 +557,10 @@ func IsError(err error) bool {
 	return (err != nil)
 }
 
-func CreateColumBuilder(fieldnr int,fixedField *FixedField ,columnsize int, 	recordStructInstance *reflect.Value) *ColumnBuilder {
+func CreateColumBuilder(fieldnr int, fixedField *FixedField, columnsize int, recordStructInstance *reflect.Value) *ColumnBuilder {
 	var result ColumnBuilder
 	columnsize = 0
-//	columnsizeCap := 3000000
+	//	columnsizeCap := 3000000
 
 	switch fixedField.ColumnType {
 	case "boolean":
@@ -601,10 +586,9 @@ func CreateColumBuilder(fieldnr int,fixedField *FixedField ,columnsize int, 	rec
 		result = &ColumnBuilderTimestapMicros{fixedField: fixedField, fieldnr: fieldnr, recordStructInstance: recordStructInstance}
 
 	default:
-		fmt.Printf("Unknown type ",fixedField.ColumnType )
+		fmt.Printf("Unknown type ", fixedField.ColumnType)
 
 	}
 
 	return &result
 }
-

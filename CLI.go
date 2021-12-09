@@ -28,16 +28,16 @@ import (
 
 func main() {
 
-        if(len(os.Args)!=8) {
-		println("Shredder V1.0 2021-11-24 22:24")
+	if len(os.Args) != 8 {
+		println("Shredder V1.0 2021-13-09 02:24")
 		println("Syntax       : shredder <http[s]://kafkabroker | /outputdir> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file> ")
 		println("example usage: shredder http://10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 tableXYZ_q123 1 test.data")
 		os.Exit(1)
 	}
 
-	schemaId,_:=strconv.Atoi(os.Args[4])
-	cores,_:= strconv.Atoi(os.Args[6])
-	fullPath_data := os.Args[7]  //"test.last10"
+	schemaId, _ := strconv.Atoi(os.Args[4])
+	cores, _ := strconv.Atoi(os.Args[6])
+	fullPath_data := os.Args[7] //"test.last10"
 
 	var fst = impl.FixedSizeTable{
 		Args:           os.Args,
@@ -49,13 +49,10 @@ func main() {
 
 	start := time.Now()
 
-	err := fst.CreateFixedSizeTableFromSlowDisk(fullPath_data,os.Args)
-	if (err != nil) {
-			panic("Nooo we have failed" + err.Error())
-		}
-		impl.PrintPerfomance(time.Since(start), &fst)
-
+	err := fst.CreateFixedSizeTableFromSlowDisk(fullPath_data, os.Args)
+	if err != nil {
+		panic("Nooo we have failed" + err.Error())
+	}
+	impl.PrintPerfomance(time.Since(start), &fst)
 
 }
-
-
