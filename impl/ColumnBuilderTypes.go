@@ -172,7 +172,7 @@ func (c ColumnBuilderDate) ParseValue(name string) bool {
 
 	f, err := DateStringT1ToUnix_microsecond(name)
 
-	if (err == nil) {
+	if err == nil {
 		return false
 	}
 	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
@@ -193,7 +193,7 @@ func (c ColumnBuilderTimestapMillis) ParseValue(name string) bool {
 
 	f, err := DateStringT1ToUnix_millisecond(name)
 
-	if (err == nil) {
+	if err == nil {
 		return false
 	}
 	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
@@ -214,10 +214,13 @@ func (c ColumnBuilderTimestapMicros) ParseValue(name string) bool {
 
 	f, err := DateStringT1ToUnix_microsecond(name)
 
-	if (err != nil) {
+	if err != nil {
 		return false
 	}
 	c.recordStructInstance.Field(c.fieldnr).SetInt(f)
 	return true
 }
 
+func (c ColumnBuilderTimestapMicros) FinishColumn() bool {
+	return true
+}
