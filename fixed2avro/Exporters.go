@@ -17,12 +17,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package impl
+package fixed2avro
 
 import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/hamba/avro"
 	"github.com/hamba/avro/ocf"
+	"github.com/ignalina/shredder/common"
 	"github.com/ignalina/shredder/kafkaavro"
 	"net/url"
 	"os"
@@ -30,65 +31,63 @@ import (
 	"strings"
 )
 
-type  ExportProducer interface {
-    Setup() error
+type ExportProducer interface {
+	Setup() error
 	ExportRow() error
 	Finish() error
 }
 
-
 type KafkaExporter struct {
-	Fstc *FixedSizeTableChunk
+	Fstc             *common.FixedSizeTableChunk
 	BootstrapServers string
-	Topic             string
-	producer             *kafkaavro.Producer
-	C                    chan kafka.Event
+	Topic            string
+	producer         *kafkaavro.Producer
+	C                chan kafka.Event
 }
 
 func (ep *KafkaExporter) Setup() error {
-	srUrl :=url.URL{
+	srUrl := url.URL{
 		Scheme: "http",
-		Host:   ep.Fstc.fixedSizeTable.Schemaregistry,
-		}
+		Host:   ep.Fstc.FixedSizeTable.Schemaregistry,
+	}
 
 	var err error
 
 	ep.producer, err = kafkaavro.NewProducer(
 		ep.Topic,
-		ep.Fstc.chunkr ,
+		ep.Fstc.Chunkr,
 		`"string"`,
-		(*ep.Fstc.fixedSizeTable.schema).String(),
+		(*ep.Fstc.FixedSizeTable.Schema).String(),
 		kafkaavro.WithKafkaConfig(&kafka.ConfigMap{
-			"bootstrap.servers":        ep.BootstrapServers,
-			"socket.keepalive.enable":  true,
+			"bootstrap.servers":       ep.BootstrapServers,
+			"socket.keepalive.enable": true,
 		}),
 		kafkaavro.WithSchemaRegistryURL(&srUrl),
 	)
 
-	ep.C=make(chan kafka.Event)
+	ep.C = make(chan kafka.Event)
 
 	return err
 }
 
-
 func (ep *KafkaExporter) ExportRow() error {
 
-		binaryValue, err := avro.Marshal(*ep.Fstc.fixedSizeTable.schema, ep.Fstc.recordStructInstance.Addr().Interface())
-		if err != nil {
+	binaryValue, err := avro.Marshal(*ep.Fstc.FixedSizeTable.Schema, ep.Fstc.RecordStructInstance.Addr().Interface())
+	if err != nil {
 		return err
 	}
 
-		binaryMsg := make([]byte, 0, len(binaryValue)+5)
-		// first byte is magic byte, always 0 for now
-		binaryMsg = append(binaryMsg, byte(0))
-		// 4-byte schema ID as returned by the Schema Registry
-		binaryMsg = append(binaryMsg, ep.Fstc.fixedSizeTable.binarySchemaId...)
-		// avro serialized data in Avro’s binary encoding
-		binaryMsg = append(binaryMsg, binaryValue...)
+	binaryMsg := make([]byte, 0, len(binaryValue)+5)
+	// first byte is magic byte, always 0 for now
+	binaryMsg = append(binaryMsg, byte(0))
+	// 4-byte schema ID as returned by the Schema Registry
+	binaryMsg = append(binaryMsg, ep.Fstc.FixedSizeTable.BinarySchemaId...)
+	// avro serialized data in Avro’s binary encoding
+	binaryMsg = append(binaryMsg, binaryValue...)
 
-     	ep.producer.ProduceFast("string", binaryMsg,ep.C)
+	ep.producer.ProduceFast("string", binaryMsg, ep.C)
 
-		return nil
+	return nil
 }
 
 func (ep *KafkaExporter) Finish() error {
@@ -104,7 +103,7 @@ func (ep *KafkaExporter) Finish() error {
 }
 
 type AvroFileExporter struct {
-	Fstc     *FixedSizeTableChunk
+	Fstc     *common.FixedSizeTableChunk
 	FileName string
 	file     *os.File
 	enc      *ocf.Encoder
@@ -112,57 +111,54 @@ type AvroFileExporter struct {
 
 func (ep *AvroFileExporter) Setup() error {
 
-	f, err := os.OpenFile(ep.FileName+strconv.Itoa(ep.Fstc.chunkr), os.O_TRUNC |os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(ep.FileName+strconv.Itoa(ep.Fstc.Chunkr), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	ep.file=f
-// TODO snappy should be configurable
-	ep.enc, err = ocf.NewEncoder(ep.Fstc.fixedSizeTable.schemaAsString , ep.file, ocf.WithCodec(ocf.Snappy))
-
+	ep.file = f
+	// TODO snappy should be configurable
+	ep.enc, err = ocf.NewEncoder(ep.Fstc.FixedSizeTable.SchemaAsString, ep.file, ocf.WithCodec(ocf.Snappy))
 
 	return err
 }
 
-
 func (ep *AvroFileExporter) ExportRow() error {
 
-	ep.enc.Encode(ep.Fstc.recordStructInstance.Addr().Interface())
+	ep.enc.Encode(ep.Fstc.RecordStructInstance.Addr().Interface())
 
 	return nil
 }
 
 func (ep *AvroFileExporter) Finish() error {
-    ep.enc.Flush()
+	ep.enc.Flush()
 	ep.enc.Close()
 	ep.file.Close()
 
 	return nil
 }
 
-
-func ExportersFactory(args []string, chunk *FixedSizeTableChunk) *ExportProducer {
+func ExportersFactory(args []string, chunk *common.FixedSizeTableChunk) *ExportProducer {
 	var ptrExportProducer ExportProducer
 	var httpType bool
 	var proto string
 	var url string
 
-	url=args[1]
-	httpType,proto=extractHttpPrefix(url)
+	url = args[1]
+	httpType, proto = extractHttpPrefix(url)
 
-	if (httpType) {
+	if httpType {
 		var ip string
 
-		ip=strings.TrimPrefix(url,proto)
+		ip = strings.TrimPrefix(url, proto)
 
 		ptrExportProducer = &KafkaExporter{
 			BootstrapServers: ip,
 			Topic:            os.Args[5],
 			Fstc:             chunk,
 		}
-	} else if(!httpType) {
+	} else if !httpType {
 		ptrExportProducer = &AvroFileExporter{
-			Fstc:             chunk,
+			Fstc:     chunk,
 			FileName: url,
 		}
 
@@ -170,21 +166,19 @@ func ExportersFactory(args []string, chunk *FixedSizeTableChunk) *ExportProducer
 
 	return &ptrExportProducer
 
-
 }
 
-func extractHttpPrefix(myString string) (bool,string) {
+func extractHttpPrefix(myString string) (bool, string) {
 	var proto string
 	var theType bool
 
-	if(strings.HasPrefix(myString,"http://")) {
-		proto="http://"
-		theType=true
-	} else if(strings.HasPrefix(myString,"https://" )) {
-		proto="https://"
-		theType=true
+	if strings.HasPrefix(myString, "http://") {
+		proto = "http://"
+		theType = true
+	} else if strings.HasPrefix(myString, "https://") {
+		proto = "https://"
+		theType = true
 	}
 
-	return theType,proto
+	return theType, proto
 }
-

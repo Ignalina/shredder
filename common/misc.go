@@ -17,47 +17,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package main
+package common
 
 import (
-	"github.com/ignalina/shredder/common"
-	"github.com/ignalina/shredder/fixed2avro"
+	"io"
 	"os"
-	"strconv"
-	"time"
+	"strings"
 )
 
-func main() {
-
-	if len(os.Args) != 8 {
-		println("Shredder V1.0 2021-12-19 02:24")
-		println("Syntax       : shredder <http[s]://kafkabroker | /outputdir> <schemaregistry> <schema file url> <schema id> <topic> <cores=partitions> <data file> ")
-		println("example usage: shredder http://10.1.1.90:9092 10.1.1.90:8081 schema1.json 5 tableXYZ_q123 1 test.data")
-		os.Exit(1)
-	}
-
-	schemaId, _ := strconv.Atoi(os.Args[4])
-	cores, _ := strconv.Atoi(os.Args[6])
-	fullPath_data := os.Args[7] //"test.last10"
-
-	var fst = common.FixedSizeTable{
-		Args:           os.Args,
-		Schemaregistry: os.Args[2],
-		SchemaFilePath: os.Args[3],
-		Cores:          cores,
-		SchemaID:       schemaId,
-	}
-
-	start := time.Now()
-
-	var t = fixed2avro.Table{
-		Fst: &fst,
-	}
-
-	err := t.CreateFixedSizeTableFromSlowDisk(fullPath_data, os.Args)
+func ReadFileToString(filePath string) (string, error) {
+	f, err := os.Open(filePath)
 	if err != nil {
-		panic("Nooo we have failed" + err.Error())
+		return "", err
 	}
-	fixed2avro.PrintPerfomance(time.Since(start), &fst)
+	defer f.Close()
+	bu := new(strings.Builder)
+	io.Copy(bu, f)
 
+	return bu.String(), nil
 }

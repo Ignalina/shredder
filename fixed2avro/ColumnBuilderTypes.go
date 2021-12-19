@@ -17,15 +17,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package impl
+package fixed2avro
 
 import (
+	"github.com/ignalina/shredder/common"
 	"reflect"
 	"strconv"
 )
 
 type ColumnBuilderBoolean struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -68,7 +69,7 @@ func (c *ColumnBuilderBoolean) FinishColumn() bool {
 }
 
 type ColumnBuilderBytes struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -83,7 +84,7 @@ func (c ColumnBuilderBytes) FinishColumn() bool {
 }
 
 type ColumnBuilderDouble struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -99,7 +100,7 @@ func (c ColumnBuilderDouble) FinishColumn() bool {
 }
 
 type ColumnBuilderFloat struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -115,7 +116,7 @@ func (c ColumnBuilderFloat) FinishColumn() bool {
 }
 
 type ColumnBuilderLong struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -132,7 +133,7 @@ func (c ColumnBuilderLong) FinishColumn() bool {
 }
 
 type ColumnBuilderInt struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -148,7 +149,7 @@ func (c ColumnBuilderInt) FinishColumn() bool {
 }
 
 type ColumnBuilderString struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -163,7 +164,7 @@ func (c ColumnBuilderString) FinishColumn() bool {
 }
 
 type ColumnBuilderDate struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -184,7 +185,7 @@ func (c ColumnBuilderDate) FinishColumn() bool {
 }
 
 type ColumnBuilderTimestapMillis struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }
@@ -205,7 +206,7 @@ func (c ColumnBuilderTimestapMillis) FinishColumn() bool {
 }
 
 type ColumnBuilderTimestapMicros struct {
-	fixedField           *FixedField
+	fixedField           *common.FixedField
 	fieldnr              int
 	recordStructInstance *reflect.Value
 }

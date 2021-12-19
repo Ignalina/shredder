@@ -17,71 +17,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package impl
+package fixed2avro
 
 import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"github.com/hamba/avro"
+	"github.com/ignalina/shredder/common"
 	"io"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
 
-type FixedField struct {
-	Len        int
-	ColumnType string
+type TableChunk struct {
+	fstc           *common.FixedSizeTableChunk
+	Table          *Table
+	columnBuilders []ColumnBuilder
+	Exporter       ExportProducer
 }
 
-type FixedRow struct {
-	FixedField   []FixedField // For parsing
-	recordStruct reflect.Type // For Avro serializing
-}
-
-type avroBinaryBytes []byte
-
-type FixedSizeTableChunk struct {
-	chunkr               int
-	fixedSizeTable       *FixedSizeTable
-	columnBuilders       []ColumnBuilder
-	bytes                []byte
-	recordStructInstance reflect.Value
-	avrobinaroValueBytes []avroBinaryBytes
-
-	exporter ExportProducer
-
-	LinesParsed       int
-	durationReadChunk time.Duration
-	durationToAvro    time.Duration
-	durationToExport  time.Duration
-}
-
-type FixedSizeTable struct {
-	Args               []string
-	Bytes              []byte
-	TableChunks        []FixedSizeTableChunk
-	row                *FixedRow
-	schema             *avro.Schema
-	schemaAsString     string
-	SchemaID           int
-	Schemaregistry     string
-	wg                 *sync.WaitGroup
-	SchemaFilePath     string
-	Cores              int
-	LinesParsed        int
-	DurationReadChunk  time.Duration
-	DurationToAvro     time.Duration
-	DurationToExport   time.Duration
-	DurationDoneExport time.Duration
-	binarySchemaId     []byte
+type Table struct {
+	Fst         *common.FixedSizeTable
+	TableChunks []TableChunk
 }
 
 type ColumnBuilder interface {
@@ -89,161 +51,32 @@ type ColumnBuilder interface {
 	FinishColumn() bool
 }
 
-func (f FixedRow) CalRowLength() int {
-	sum := 0
+func (tb *TableChunk) CreateColumBuilders() bool {
 
-	for _, num := range f.FixedField {
-		sum += num.Len
-	}
-	return sum + 2
-}
-
-func findLastNL(bytes []byte) int {
-	p2 := len(bytes)
-	if 0 == p2 {
-		return -1
-	}
-
-	for p2 > 2 {
-		if bytes[p2-2] == 0x0d && bytes[p2-1] == 0x0a {
-			return p2
-		}
-		p2--
-	}
-
-	return 0
-}
-
-func CreateSchema(schemaAsString string) (*avro.Schema, error) {
-
-	avroSchema, err := avro.Parse(schemaAsString)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	return &avroSchema, err
-}
-
-func readFileToString(filePath string) (string, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	bu := new(strings.Builder)
-	io.Copy(bu, f)
-
-	return bu.String(), nil
-}
-
-func CreateRowFromSchema(schemaAsString string) (*FixedRow, error) {
-
-	var fixedRow FixedRow
-	var columnLen float64
-	var columnName, columnType string
-
-	var v interface{}
-	sf := []reflect.StructField{}
-	ff := []FixedField{}
-
-	// Unmarshal or Decode the JSON to the interface.
-	json.Unmarshal([]byte(schemaAsString), &v)
-	data := v.(map[string]interface{})
-
-	for k, v := range data {
-		switch v := v.(type) {
-		case []interface{}:
-
-			nrOfCols := len(v)
-
-			ff = make([]FixedField, nrOfCols)
-			sf = make([]reflect.StructField, nrOfCols)
-
-			for i, u := range v {
-				maps := u.(map[string]interface{})
-				columnName = maps["name"].(string)
-				maps2 := maps["type"].(map[string]interface{})
-				columnLen = maps2["len"].(float64)
-
-				for ii, uu := range maps2 {
-
-					switch uu.(type) {
-					case string:
-						if ii == "type" {
-							columnType = uu.(string)
-						} else if ii == "logicalType" {
-							columnType = uu.(string)
-						}
-
-					}
-				}
-
-				ff[i] = FixedField{
-					Len:        int(columnLen),
-					ColumnType: columnType, // logical column type , for column parser factory.
-				}
-
-				sf[i] = reflect.StructField{
-					Name: strings.Title(columnName),
-					Type: getGoTypeFromAvroType(columnType),
-				}
-
-			}
-
-		default:
-			log.Println("ignored (unknown)", k, v)
-		}
-	}
-	fixedRow.FixedField = ff
-	fixedRow.recordStruct = reflect.StructOf(sf)
-
-	return &fixedRow, nil
-}
-
-func getGoTypeFromAvroType(columnType string) reflect.Type {
-
-	mapping := map[string]reflect.Type{
-		"boolean":          reflect.TypeOf(true),
-		"Bytes":            reflect.TypeOf([]byte("")),
-		"float":            reflect.TypeOf(float32(0)),
-		"double":           reflect.TypeOf(float64(0)),
-		"long":             reflect.TypeOf(int64(0)),
-		"int":              reflect.TypeOf(int32(0)),
-		"string":           reflect.TypeOf(string("")),
-		"date":             reflect.TypeOf(int32(0)),
-		"time-millis":      reflect.TypeOf(int32(0)),
-		"time-micros":      reflect.TypeOf(int64(0)),
-		"timestamp-millis": reflect.TypeOf(int64(0)),
-		"timestamp-micros": reflect.TypeOf(int64(0)),
-	}
-
-	return mapping[columnType]
-}
-
-func (fstc *FixedSizeTableChunk) CreateColumBuilders() bool {
-	fstc.columnBuilders = make([]ColumnBuilder, len(fstc.fixedSizeTable.row.FixedField))
+	tb.columnBuilders = make([]ColumnBuilder, len(tb.fstc.FixedSizeTable.Row.FixedField))
 
 	var err error
 
-	err = fstc.exporter.Setup()
+	err = tb.Exporter.Setup()
+	//		Exporter[tb.fstc.Chunkr].Setup()
 
 	if nil != err {
 		return false
 	}
 
-	v := reflect.New(fstc.fixedSizeTable.row.recordStruct).Elem()
-	fstc.recordStructInstance = v
+	v := reflect.New(tb.fstc.FixedSizeTable.Row.RecordStruct).Elem()
+	tb.fstc.RecordStructInstance = v
 
-	for i, ff := range fstc.fixedSizeTable.row.FixedField {
-		fstc.columnBuilders[i] = *CreateColumBuilder(i, &ff, ff.Len, &fstc.recordStructInstance)
+	for i, ff := range tb.fstc.FixedSizeTable.Row.FixedField {
+		tb.columnBuilders[i] = *CreateColumBuilder(i, &ff, ff.Len, &tb.fstc.RecordStructInstance)
 	}
 	return true
 }
-func (fstc *FixedSizeTableChunk) appendAvroBinary() error {
+func (tb *TableChunk) appendAvroBinary() error {
 
 	// TODO: what if we could have the marhsalling done to a specifed array with the first 5 bytes with the header...
 
-	binaryValue, err := avro.Marshal(*fstc.fixedSizeTable.schema, fstc.recordStructInstance.Addr().Interface())
+	binaryValue, err := avro.Marshal(*tb.fstc.FixedSizeTable.Schema, tb.fstc.RecordStructInstance.Addr().Interface())
 	if err != nil {
 		return err
 	}
@@ -252,41 +85,41 @@ func (fstc *FixedSizeTableChunk) appendAvroBinary() error {
 	// first byte is magic byte, always 0 for now
 	binaryMsg = append(binaryMsg, byte(0))
 	// 4-byte schema ID as returned by the Schema Registry
-	binaryMsg = append(binaryMsg, fstc.fixedSizeTable.binarySchemaId...)
+	binaryMsg = append(binaryMsg, tb.fstc.FixedSizeTable.BinarySchemaId...)
 	// avro serialized data in Avro’s binary encoding
 	binaryMsg = append(binaryMsg, binaryValue...)
 
-	fstc.avrobinaroValueBytes = append(fstc.avrobinaroValueBytes, binaryMsg)
+	tb.fstc.AvrobinaroValueBytes = append(tb.fstc.AvrobinaroValueBytes, binaryMsg)
 
 	return nil
 }
 
 // Read chunks of file and process them in go routine after each chunk read. Slow disk is non non zerocopy disk like sans etc
-func (fst *FixedSizeTable) CreateFixedSizeTableFromSlowDisk(fileName string, args []string) error {
+func (t *Table) CreateFixedSizeTableFromSlowDisk(fileName string, args []string) error {
 	var err error
 
-	fst.schemaAsString, err = readFileToString(fst.SchemaFilePath)
-	fst.schema, err = CreateSchema(fst.schemaAsString)
+	t.Fst.SchemaAsString, err = common.ReadFileToString(t.Fst.SchemaFilePath)
+	t.Fst.Schema, err = common.CreateSchema(t.Fst.SchemaAsString)
 	if nil != err {
 		return err
 	}
-	fst.binarySchemaId = make([]byte, 4)
-	binary.BigEndian.PutUint32(fst.binarySchemaId, uint32(fst.SchemaID))
+	t.Fst.BinarySchemaId = make([]byte, 4)
+	binary.BigEndian.PutUint32(t.Fst.BinarySchemaId, uint32(t.Fst.SchemaID))
 	if err != nil {
 		return err
 	}
 
-	fst.row, err = CreateRowFromSchema(fst.schemaAsString)
+	t.Fst.Row, err = common.CreateRowFromSchema(t.Fst.SchemaAsString)
 	if nil != err {
 		return err
 	}
 
-	fst.wg = &sync.WaitGroup{}
-	return ParalizeChunks(fst, fileName, args)
+	t.Fst.Wg = &sync.WaitGroup{}
+	return ParalizeChunks(t, fileName, args)
 
 }
 
-func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
+func ParalizeChunks(t *Table, filename string, args []string) error {
 
 	file, err := os.Open(filename)
 
@@ -296,11 +129,12 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 	defer file.Close()
 	fi, _ := file.Stat()
 
-	fst.Bytes = make([]byte, fi.Size())
-	fst.TableChunks = make([]FixedSizeTableChunk, fst.Cores)
+	t.Fst.Bytes = make([]byte, fi.Size())
+	t.Fst.TableChunks = make([]common.FixedSizeTableChunk, t.Fst.Cores)
+	t.TableChunks = make([]TableChunk, t.Fst.Cores)
 
-	chunkSize := fi.Size() / int64(fst.Cores)
-	rowlength := int64(fst.row.CalRowLength())
+	chunkSize := fi.Size() / int64(t.Fst.Cores)
+	rowlength := int64(t.Fst.Row.CalRowLength())
 
 	if chunkSize < int64(rowlength) {
 		chunkSize = int64(rowlength)
@@ -313,64 +147,63 @@ func ParalizeChunks(fst *FixedSizeTable, filename string, args []string) error {
 
 	for goon {
 
-		fst.TableChunks[chunkNr] = FixedSizeTableChunk{fixedSizeTable: fst, chunkr: chunkNr}
-		// Uggly way to init two way pointer. NOTE: refactor !
-		fst.TableChunks[chunkNr].exporter = *ExportersFactory(os.Args, &fst.TableChunks[chunkNr])
-
-		fst.TableChunks[chunkNr].CreateColumBuilders()
+		t.Fst.TableChunks[chunkNr] = common.FixedSizeTableChunk{FixedSizeTable: t.Fst, Chunkr: chunkNr}
+		t.TableChunks[chunkNr] = TableChunk{fstc: &t.Fst.TableChunks[chunkNr], Table: t}
+		t.TableChunks[chunkNr].Exporter = *ExportersFactory(os.Args, &t.Fst.TableChunks[chunkNr])
+		t.TableChunks[chunkNr].CreateColumBuilders()
 
 		i1 := int(chunkSize) * chunkNr
 		i2 := int(chunkSize) * (chunkNr + 1)
-		if chunkNr == (fst.Cores - 1) {
-			i2 = len(fst.Bytes)
+		if chunkNr == (t.Fst.Cores - 1) {
+			i2 = len(t.Fst.Bytes)
 		}
-		buf := fst.Bytes[i1:i2]
+		buf := t.Fst.Bytes[i1:i2]
 		startReadChunk := time.Now()
 		nread, _ := io.ReadFull(file, buf)
-		fst.TableChunks[chunkNr].durationReadChunk = time.Since(startReadChunk)
+		t.Fst.TableChunks[chunkNr].DurationReadChunk = time.Since(startReadChunk)
 		buf = buf[:nread]
-		goon = i2 < len(fst.Bytes)
-		p2 = i1 + findLastNL(buf)
+		goon = i2 < len(t.Fst.Bytes)
+		p2 = i1 + common.FindLastNL(buf)
 
-		fst.TableChunks[chunkNr].bytes = fst.Bytes[p1:p2]
+		t.Fst.TableChunks[chunkNr].Bytes = t.Fst.Bytes[p1:p2]
 		p1 = p2
-		fst.wg.Add(1)
-		fst.TableChunks[chunkNr].process()
+		t.Fst.Wg.Add(1)
+		t.TableChunks[chunkNr].process()
 		chunkNr++
 	}
 
-	fst.wg.Wait() // Waiting for ALL pararell routes to finish
+	t.Fst.Wg.Wait() // Waiting for ALL pararell routes to finish
 
 	// Sum up some statitics
-	for _, tableChunk := range fst.TableChunks {
-		fst.DurationToAvro += tableChunk.durationToAvro
-		fst.DurationReadChunk += tableChunk.durationReadChunk
-		fst.DurationToExport += tableChunk.durationToExport
-		fst.LinesParsed += tableChunk.LinesParsed
+	for _, tableChunk := range t.Fst.TableChunks {
+		t.Fst.DurationToAvro += tableChunk.DurationToAvro
+		t.Fst.DurationReadChunk += tableChunk.DurationReadChunk
+		t.Fst.DurationToExport += tableChunk.DurationToExport
+		t.Fst.LinesParsed += tableChunk.LinesParsed
 	}
 
 	startWaitDoneExport := time.Now()
 
-	for _, tableChunk := range fst.TableChunks {
-		err := tableChunk.exporter.Finish()
+	for i, _ := range t.Fst.TableChunks {
+		err := t.TableChunks[i].Exporter.Finish()
 		if nil != err {
 			return err
 		}
 	}
-	fst.DurationDoneExport = time.Since(startWaitDoneExport)
+	t.Fst.DurationDoneExport = time.Since(startWaitDoneExport)
 
 	return nil
 }
 
-func (fstc *FixedSizeTableChunk) process() {
+func (tb *TableChunk) process() {
 	startToAvro := time.Now()
-	defer fstc.fixedSizeTable.wg.Done()
-	re := bytes.NewReader(fstc.bytes)
+	defer tb.fstc.FixedSizeTable.Wg.Done()
+	re := bytes.NewReader(tb.fstc.Bytes)
 	//	decodingReader := transform.NewReader(re, charmap.ISO8859_1.NewDecoder())
 
 	scanner := bufio.NewScanner(re)
 
-	substring := createSubstring(fstc.fixedSizeTable)
+	substring := createSubstring(tb.fstc.FixedSizeTable)
 
 	lineCnt := 0
 	for scanner.Scan() {
@@ -383,14 +216,13 @@ func (fstc *FixedSizeTableChunk) process() {
 
 		getSplitBytePositions(line, substring)
 
-		for ci, _ := range fstc.fixedSizeTable.row.FixedField {
-			fstc.columnBuilders[ci].ParseValue(substring[ci].sub)
+		for ci, _ := range tb.fstc.FixedSizeTable.Row.FixedField {
+			tb.columnBuilders[ci].ParseValue(substring[ci].sub)
 		}
-		fstc.exporter.ExportRow()
-
+		tb.Exporter.ExportRow()
 	}
-	fstc.LinesParsed = lineCnt
-	fstc.durationToAvro = time.Since(startToAvro)
+	tb.fstc.LinesParsed = lineCnt
+	tb.fstc.DurationToAvro = time.Since(startToAvro)
 
 }
 
@@ -557,7 +389,7 @@ func IsError(err error) bool {
 	return (err != nil)
 }
 
-func CreateColumBuilder(fieldnr int, fixedField *FixedField, columnsize int, recordStructInstance *reflect.Value) *ColumnBuilder {
+func CreateColumBuilder(fieldnr int, fixedField *common.FixedField, columnsize int, recordStructInstance *reflect.Value) *ColumnBuilder {
 	var result ColumnBuilder
 	columnsize = 0
 	//	columnsizeCap := 3000000
